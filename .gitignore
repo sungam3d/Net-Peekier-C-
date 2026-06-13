@@ -1,0 +1,27 @@
+# Build output
+bin/
+obj/
+publish/
+*.user
+
+# IDE
+.vs/
+.vscode/
+.idea/
+
+# Test / coverage
+*.coverage
+TestResults/
+
+# Local config
+nuget.config
+.env
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# App runtime artefacts (these are intentionally written next to the exe;
+# never check in someone else's settings or activity log)
+settings.txt
+log/

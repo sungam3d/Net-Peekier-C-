@@ -1,0 +1,73 @@
+<Window x:Class="NetPeeker.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Net-Peeker — per-process network monitor"
+        Width="880" Height="560" MinWidth="700" MinHeight="420">
+    <DockPanel>
+
+        <!-- Status bar at the bottom: backend mode + admin hint -->
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <TextBlock x:Name="StatusText" Text="Initialising…" />
+            </StatusBarItem>
+        </StatusBar>
+
+        <!-- Top menu -->
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="E_xit" Click="OnExit" />
+            </MenuItem>
+            <MenuItem Header="_Settings">
+                <MenuItem Header="_Firewall and Tags…" IsEnabled="False" />
+                <MenuItem Header="_Preferences…" IsEnabled="False" />
+                <Separator />
+                <MenuItem Header="_Lockdown mode" IsCheckable="True" IsEnabled="False" />
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="_Statistics…" IsEnabled="False" />
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_About…" Click="OnAbout" />
+            </MenuItem>
+        </Menu>
+
+        <!-- Dashboard: upload / download / system -->
+        <Grid DockPanel.Dock="Top" Margin="8" Height="80">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0" BorderBrush="#888" BorderThickness="1" Padding="8" Margin="2">
+                <StackPanel>
+                    <TextBlock Text="UPLOAD" FontWeight="Bold" />
+                    <TextBlock x:Name="UpNowText"  Text="now: --" />
+                    <TextBlock x:Name="UpPeakText" Text="peak: --" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" BorderBrush="#888" BorderThickness="1" Padding="8" Margin="2">
+                <StackPanel>
+                    <TextBlock Text="DOWNLOAD" FontWeight="Bold" />
+                    <TextBlock x:Name="DownNowText"  Text="now: --" />
+                    <TextBlock x:Name="DownPeakText" Text="peak: --" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" BorderBrush="#888" BorderThickness="1" Padding="8" Margin="2">
+                <StackPanel>
+                    <TextBlock Text="SYSTEM" FontWeight="Bold" />
+                    <TextBlock x:Name="SysCpuText" Text="CPU: --" />
+                    <TextBlock x:Name="SysRamText" Text="RAM: --" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- App list. Phase 4: hierarchical TreeView or DataGrid w/ grouping;
+             columns: Program | Upload | Download | Total | Listening Ports -->
+        <DataGrid x:Name="AppGrid"
+                  AutoGenerateColumns="True"
+                  IsReadOnly="True"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  CanUserAddRows="False" />
+    </DockPanel>
+</Window>

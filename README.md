@@ -1,0 +1,46 @@
+# Net-Peeker (C# port)
+
+C# / .NET 8 rebuild of [Net-Peekier](../) — same UX (dashboard + app list +
+firewall + monitor), but **no third-party kernel driver**. Enforcement is the
+OS's own WFP filter engine via its user-mode API; monitoring is ETW.
+
+## Status
+
+Phase 0 + most of Phase 1 are in place. The native and GUI layers are
+scaffolded with the right interface shapes so the implementation lands
+chunk-by-chunk without disturbing the rest. See **MIGRATION_PLAN.md** in the
+repo root for the live checklist.
+
+## Build
+
+You need .NET 8 SDK and (eventually) a Windows machine to run.
+
+```powershell
+# from the NetPeeker folder
+dotnet restore
+dotnet build
+```
+
+To produce a single-file exe:
+
+```powershell
+dotnet publish src/NetPeeker.App/NetPeeker.App.csproj -c Release
+```
+
+The output is `src/NetPeeker.App/bin/Release/net8.0-windows/win-x64/publish/NetPeeker.exe`.
+It is fully self-contained: no .NET runtime install required on the target
+machine.
+
+## Why three projects
+
+- **`NetPeeker.Core`** — models, settings, IP math, history. Plain C#, no
+  Win32, no GUI. Unit-testable. Mirror of `netpeekier/models.py`,
+  `settings.py`, `ipcalc.py`, `util.py`, `history.py`.
+- **`NetPeeker.Native`** — Windows-specific interop: IP Helper for the
+  connection table, ETW for byte counters, WFP for firewall enforcement,
+  PerformanceCounter/LibreHWM for system stats. Mirror of `capture.py`,
+  `procmap.py`, `firewall.py`, `sysstats.py`, plus the `Monitor` orchestrator.
+- **`NetPeeker.App`** — WPF GUI. Mirror of `netpeekier/gui/*`.
+
+The split keeps the Core layer testable on any machine and lets you swap GUIs
+(WPF → Avalonia for the AOT path, say) without disturbing the engine.

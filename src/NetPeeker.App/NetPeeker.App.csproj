@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RootNamespace>NetPeeker.App</RootNamespace>
+    <AssemblyName>NetPeeker</AssemblyName>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!-- Single-file publish settings; activate with `dotnet publish -c Release`. -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <!-- Leave trimming off until ETW + WFP wrappers are proven; reflection on
+         TraceEvent's manifested events doesn't trim cleanly. Phase 5 task. -->
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetPeeker.Core\NetPeeker.Core.csproj" />
+    <ProjectReference Include="..\NetPeeker.Native\NetPeeker.Native.csproj" />
+  </ItemGroup>
+
+</Project>
