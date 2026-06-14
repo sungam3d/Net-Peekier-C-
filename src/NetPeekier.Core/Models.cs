@@ -111,7 +111,7 @@ public readonly record struct ConnectionKey(
     string Protocol, string LocalIp, int LocalPort, string RemoteIp, int RemotePort);
 
 /// <summary>One row in the main application list.</summary>
-public sealed class ProcStat
+public sealed record ProcStat
 {
     public required int    Pid  { get; init; }
     public required string Name { get; init; }

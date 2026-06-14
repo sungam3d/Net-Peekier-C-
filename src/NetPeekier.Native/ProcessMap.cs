@@ -10,6 +10,9 @@
 // via CsWin32.
 
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using System.Text;
 using NetPeekier.Core;
 
 namespace NetPeekier.Native;
@@ -32,25 +35,99 @@ public sealed class ProcessMap
     private IReadOnlyList<Connection> _rawConns = Array.Empty<Connection>();
     private DateTime _rawConnsTs = DateTime.MinValue;
 
+    // ---- Win32 process-image resolution ---------------------------------
+    // Process.ProcessName / MainModule fail on a LOT of processes (services,
+    // elevated, 32-vs-64-bit mismatch), which is why an earlier version saw
+    // every row fall back to "PID nnnn". QueryFullProcessImageName via a
+    // LIMITED-information OpenProcess handle works for almost everything when
+    // we're elevated, and degrades gracefully otherwise.
+
+    [Flags]
+    private enum ProcessAccess : uint
+    {
+        QueryInformation        = 0x0400,
+        QueryLimitedInformation = 0x1000,
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr OpenProcess(ProcessAccess access, bool inherit, int pid);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CloseHandle(IntPtr h);
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool QueryFullProcessImageName(
+        IntPtr hProcess, int flags, StringBuilder buffer, ref int size);
+
+    /// <summary>
+    /// Full image path for a pid via QueryFullProcessImageName, or "" if it
+    /// can't be resolved (process gone, or insufficient rights even with a
+    /// limited handle). Never throws.
+    /// </summary>
+    [SupportedOSPlatform("windows")]
+    private static string ImagePath(int pid)
+    {
+        if (pid <= 0) return "";
+        IntPtr h = OpenProcess(ProcessAccess.QueryLimitedInformation, false, pid);
+        if (h == IntPtr.Zero)
+            h = OpenProcess(ProcessAccess.QueryInformation, false, pid);
+        if (h == IntPtr.Zero) return "";
+        try
+        {
+            var sb = new StringBuilder(1024);
+            int size = sb.Capacity;
+            return QueryFullProcessImageName(h, 0, sb, ref size) ? sb.ToString() : "";
+        }
+        finally { CloseHandle(h); }
+    }
+
     public string Name(int? pid)
     {
         if (pid is null) return "System Idle / Unknown";
         var p = pid.Value;
         lock (_gate)
         {
-            if (_names.TryGetValue(p, out var cached)) return cached;
+            // Only treat a cached value as authoritative if it's a REAL name
+            // (not the "PID n" fallback). This stops a transient failure from
+            // poisoning the cache forever, which is what made every row show
+            // "PID nnnn".
+            if (_names.TryGetValue(p, out var cached) &&
+                !cached.StartsWith("PID ", StringComparison.Ordinal))
+                return cached;
+
+            // Prefer the Win32 image path (works for services/elevated procs).
+            string name = "";
             try
             {
-                using var proc = Process.GetProcessById(p);
-                _names[p] = proc.ProcessName;
-                try { _ctime[p] = proc.StartTime; } catch { /* access denied; ignore */ }
-                return _names[p];
+                var path = OperatingSystem.IsWindows() ? ImagePath(p) : "";
+                if (!string.IsNullOrEmpty(path))
+                {
+                    name = Path.GetFileName(path);
+                    _exes[p] = path;   // opportunistically fill the exe cache too
+                }
             }
-            catch
+            catch { /* fall through */ }
+
+            // Fallback to the managed API for the odd case Win32 misses.
+            if (string.IsNullOrEmpty(name))
             {
-                _names[p] = $"PID {p}";
-                return _names[p];
+                try
+                {
+                    using var proc = Process.GetProcessById(p);
+                    name = proc.ProcessName;
+                    if (!string.IsNullOrEmpty(name) &&
+                        !name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                        name += ".exe";
+                    try { _ctime[p] = proc.StartTime; } catch { /* access denied */ }
+                }
+                catch { /* process gone or no access */ }
             }
+
+            if (string.IsNullOrEmpty(name)) name = $"PID {p}";
+            _names[p] = name;
+            return name;
         }
     }
 
@@ -60,20 +137,30 @@ public sealed class ProcessMap
         var p = pid.Value;
         lock (_gate)
         {
-            if (_exes.TryGetValue(p, out var cached)) return cached;
-            // TODO (Phase 2): use QueryFullProcessImageName via CsWin32 for
-            // protected processes. Process.MainModule throws AccessDenied on
-            // services and 32-vs-64 mismatches. For now, best-effort:
+            // Same anti-poison rule: only trust a non-empty cached path.
+            if (_exes.TryGetValue(p, out var cached) && !string.IsNullOrEmpty(cached))
+                return cached;
+
+            string exe = "";
             try
             {
-                using var proc = Process.GetProcessById(p);
-                _exes[p] = proc.MainModule?.FileName ?? "";
+                exe = OperatingSystem.IsWindows() ? ImagePath(p) : "";
             }
-            catch
+            catch { /* ignore */ }
+
+            if (string.IsNullOrEmpty(exe))
             {
-                _exes[p] = "";
+                // Last resort: managed MainModule (often denied; that's fine).
+                try
+                {
+                    using var proc = Process.GetProcessById(p);
+                    exe = proc.MainModule?.FileName ?? "";
+                }
+                catch { /* ignore */ }
             }
-            return _exes[p];
+
+            _exes[p] = exe;
+            return exe;
         }
     }
 

@@ -210,6 +210,29 @@ machine with NuGet access — you'll want `TraceEvent` for Phase 5.
 
 ## Status log (newest first)
 
+- **2026-06-14 — Fixed: all rows showing "PID n", no stats, fast vanishing.**
+  - Root cause of the names: ProcessMap.Name/Exe used
+    Process.ProcessName / MainModule, which throw on most services /
+    elevated / cross-bitness processes — and the catch block then
+    *poison-cached* the "PID n" fallback forever, so every row degraded to
+    a numeric name. Rewrote resolution to use Win32
+    QueryFullProcessImageName via a QueryLimitedInformation OpenProcess
+    handle (works for almost everything when elevated), with the managed
+    API only as a fallback, and stopped caching the fallback as authoritative.
+  - "Forget pids after N minutes" now does what the label implies: a
+    quiet-but-alive process lingers (with its last-known stats, rates
+    zeroed) for the configured window instead of blinking out the instant
+    it has no live connection. New _lastSeen / _lastStat linger caches;
+    pids re-enter the working set while within the window and are expired
+    once it passes and the process is gone. Relabelled "Keep idle
+    processes for: N minutes".
+  - ProcStat is now a record (enables the `with`-clone for the lingering
+    snapshot). 97/97 Core tests still pass.
+  - Missing speeds/totals are expected without elevation: per-process
+    bytes come from the ETW kernel session (admin-only). Without it the
+    list still shows names, connections and listening ports via IP Helper;
+    the status bar flags that speeds need elevation.
+
 - **2026-06-14 — GUI brought to full Python parity + app icon/logo.**
   - MainWindow rebuilt to match the Python layout exactly: title
     "Net-Peekier  -  per-process network monitor", 880×560 default /

@@ -60,11 +60,11 @@
                 <TextBox x:Name="AllowMinBox" Width="80" HorizontalAlignment="Left" />
             </DockPanel>
 
-            <!-- packet purge -->
+            <!-- linger / forget pids -->
             <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center"
-                       Text="Forget pids after:" />
+                       Text="Keep idle processes for:" />
             <DockPanel Grid.Row="4" Grid.Column="1" VerticalAlignment="Center">
-                <TextBlock Text=" minutes (blank = never)" DockPanel.Dock="Right"
+                <TextBlock Text=" minutes (blank = forget immediately)" DockPanel.Dock="Right"
                            Foreground="#666" VerticalAlignment="Center" Margin="6,0,0,0" />
                 <TextBox x:Name="PurgeBox" Width="80" HorizontalAlignment="Left" />
             </DockPanel>

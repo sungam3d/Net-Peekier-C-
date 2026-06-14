@@ -70,6 +70,13 @@ public sealed class NetworkMonitor : IDisposable
     private readonly Dictionary<int, HashSet<ConnectionKey>> _prevConns = new();
     private readonly Dictionary<int, (long Up, long Down)>   _prevPidTotals = new();
 
+    // "Forget pids after N minutes" linger cache. When a process stops having
+    // live connections / traffic we keep showing it (with its last-known
+    // stats) until this window expires, as long as it's still running. Keyed
+    // by pid -> last wall-clock time (epoch seconds) it was seen active.
+    private readonly Dictionary<int, double>     _lastSeen = new();
+    private readonly Dictionary<int, ProcStat>   _lastStat = new();
+
     // LAN networks parsed from settings, cached.
     private List<IPNetworkRange> _lanNets;
 
@@ -424,6 +431,11 @@ public sealed class NetworkMonitor : IDisposable
 
         var nowWall = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
         var idleSecs = s.IdleHideMinutes.HasValue ? s.IdleHideMinutes.Value * 60.0 : (double?)null;
+        // "Forget pids after N minutes": keep a quiet-but-alive process on
+        // screen for this long after its last activity. null/0 = forget
+        // immediately (old behaviour).
+        var lingerSecs = s.PacketPurgeMinutes.HasValue && s.PacketPurgeMinutes.Value > 0
+            ? s.PacketPurgeMinutes.Value * 60.0 : 0.0;
 
         // Union of pids that have connections, current traffic, or any history.
         var livePids = new HashSet<int>(connsByPid.Keys);
@@ -431,17 +443,41 @@ public sealed class NetworkMonitor : IDisposable
         var allPids = new HashSet<int>(livePids);
         foreach (var pid in pidTotals.Keys) allPids.Add(pid);
 
+        // Also reconsider pids we saw recently (within the linger window) even
+        // if they have no live connection / rate this tick, so a process that
+        // briefly goes quiet doesn't blink out of the list.
+        if (lingerSecs > 0)
+        {
+            foreach (var kv in _lastSeen)
+                if (nowWall - kv.Value <= lingerSecs)
+                    allPids.Add(kv.Key);
+        }
+
         var deadPids = new HashSet<int>();
         var seenPids = new HashSet<int>();
 
         foreach (var pid in allPids)
         {
-            // Terminated-process cleanup: a history-only pid that no longer
-            // exists is gone; drop it and forget its counters.
-            if (!livePids.Contains(pid) && !PidAlive(pid))
+            bool live = livePids.Contains(pid);
+            // Terminated-process cleanup. A pid with no live data is dropped
+            // only when it's both past its linger window AND actually gone.
+            if (!live)
             {
-                deadPids.Add(pid);
-                continue;
+                bool withinLinger = lingerSecs > 0
+                    && _lastSeen.TryGetValue(pid, out var ls)
+                    && (nowWall - ls) <= lingerSecs;
+                if (!withinLinger && !PidAlive(pid))
+                {
+                    deadPids.Add(pid);
+                    continue;
+                }
+                if (!withinLinger && !pidTotals.ContainsKey(pid))
+                {
+                    // Alive but quiet and not within linger and no history to
+                    // show — skip it (don't accumulate forever).
+                    if (!PidAlive(pid)) { deadPids.Add(pid); }
+                    continue;
+                }
             }
             seenPids.Add(pid);
 
@@ -514,7 +550,37 @@ public sealed class NetworkMonitor : IDisposable
                 UsesWan        = usesWan,
             };
 
-            if (!idle) procs.Add(ps);
+            // Does this pid have anything worth showing right now? Connections,
+            // current rate, or cumulative totals all count as "real".
+            bool hasData = conns.Count > 0 || rate.Up > 0 || rate.Down > 0
+                           || tot.Up > 0 || tot.Down > 0 || listening.Count > 0;
+
+            if (hasData)
+            {
+                _lastSeen[pid] = nowWall;
+                _lastStat[pid] = ps;
+                if (!idle) procs.Add(ps);
+            }
+            else if (lingerSecs > 0
+                     && _lastSeen.TryGetValue(pid, out var ls2)
+                     && (nowWall - ls2) <= lingerSecs
+                     && _lastStat.TryGetValue(pid, out var prevStat))
+            {
+                // Quiet now, but within the linger window — keep showing the
+                // last-known snapshot (rates zeroed) so it doesn't blink out.
+                var lingerStat = prevStat with
+                {
+                    UpBps = 0,
+                    DownBps = 0,
+                    Connections = new List<Connection>(),
+                };
+                if (!idle) procs.Add(lingerStat);
+            }
+            else if (!idle)
+            {
+                // No data and no linger — show the bare row (name + ports).
+                procs.Add(ps);
+            }
 
             // Activity logging: per-exe byte delta since last tick.
             if (!string.IsNullOrEmpty(exe) && (tot.Up > 0 || tot.Down > 0))
@@ -536,8 +602,25 @@ public sealed class NetworkMonitor : IDisposable
                 _lastActive.Remove(pid);
                 _prevConns.Remove(pid);
                 _prevPidTotals.Remove(pid);
+                _lastSeen.Remove(pid);
+                _lastStat.Remove(pid);
             }
             Backend.ForgetPids(deadPids);
+        }
+        // Expire linger entries whose window has elapsed (so they don't grow
+        // unbounded for short-lived processes).
+        if (lingerSecs > 0)
+        {
+            var expired = _lastSeen.Where(kv => (nowWall - kv.Value) > lingerSecs)
+                                   .Select(kv => kv.Key).ToList();
+            foreach (var pid in expired)
+            {
+                if (!PidAlive(pid))
+                {
+                    _lastSeen.Remove(pid);
+                    _lastStat.Remove(pid);
+                }
+            }
         }
         // Prune activity maps for pids we no longer track at all.
         var stale = _lastActive.Keys.Where(p => !seenPids.Contains(p) && !livePids.Contains(p)).ToList();
