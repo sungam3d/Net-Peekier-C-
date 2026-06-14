@@ -22,13 +22,13 @@
   </ItemGroup>
 
   <!--
-    TODO when you have NuGet access: re-enable TraceEvent for ETW. The
-    hand-rolled IpHelper P/Invoke needs no third-party package; only the
-    ETW backend does.
-
-    <ItemGroup>
-      <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.16" />
-    </ItemGroup>
+    TraceEvent is required for the ETW per-process byte counting in
+    EtwMonitor.cs. Build offline (no NuGet) will fail; run `dotnet restore`
+    once to pull this and you're set. The hand-rolled IpHelper P/Invoke
+    needs no third-party package.
   -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.16" />
+  </ItemGroup>
 
 </Project>

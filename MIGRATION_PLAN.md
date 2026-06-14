@@ -84,16 +84,19 @@ NetPeekier.sln
 - [x] `History.cs`: rolling log
 - [x] **97/97 tests passing**: IpCalc, Settings round-trip, Formatting, WfpFirewall.ValidExe
 
-### Phase 2 — Native: monitor (read-only) ✅ MOSTLY DONE
+### Phase 2 — Native: monitor (read-only) ✅ DONE
 - [x] `IpHelper.cs`: hand-rolled P/Invoke for TCP4 / TCP6 / UDP4 / UDP6 tables
 - [x] `ProcessMap.cs`: pid↔endpoint table, name/exe cache, PID-reuse check
-- [x] `Monitor.cs`: full tick body ported from `monitor._tick`
+- [x] `NetworkMonitor.cs`: full tick body ported from `monitor._tick`
       (idle hiding, WAN/LAN classification, history logging, totals,
       dead-PID cleanup, system-IO baseline + fallback)
-- [ ] `EtwMonitor.cs`: still a stub. Needs `Microsoft.Diagnostics.Tracing.TraceEvent`
-      NuGet package, which the offline sandbox couldn't restore. Monitor
-      falls back to system-wide `NetworkInterface.GetIPStatistics()` for
-      dashboard totals — works first try on a connected box.
+- [x] `EtwMonitor.cs`: real implementation against
+      `Microsoft.Diagnostics.Tracing.TraceEvent`. Opens the NT Kernel
+      Logger, subscribes to TcpIp{Send,Recv} + TcpIp{Send,Recv}IPV6 +
+      UdpIp{Send,Recv} + UdpIp{Send,Recv}IPV6, accumulates bytes per-PID
+      and per-ConnectionKey. NuGet restore now required for Native.
+      Falls back cleanly when not elevated or kernel session is
+      already held by another consumer.
 
 ### Phase 3 — Native: WFP firewall ✅ STRUCTURALLY COMPLETE
 - [x] `Wfp/Native.cs`: hand-rolled P/Invoke for `fwpuclnt.dll`
@@ -147,11 +150,16 @@ NetPeekier.sln
 - [ ] Hierarchical app list (svchost expand UX — polish task)
 
 ### Phase 5 — Polish + publish
-- [ ] App icon, version metadata, optional sign
-- [ ] `dotnet publish` produces one `NetPeekier.exe`
+- [x] Version metadata embedded in NetPeekier.App.csproj (2.0.0)
+- [x] `Microsoft.Diagnostics.Tracing.TraceEvent` integrated;
+      `EtwMonitor` is now the real implementation (Phase 2 task moved
+      here historically; now actually done)
+- [x] `dotnet publish` produces a single `NetPeekier.exe` (verified
+      on Windows 11 26200, single-file self-contained)
+- [ ] App icon (provide an .ico, reference from csproj)
+- [ ] Sign the exe (optional; smooths SmartScreen)
 - [ ] Smoke test on Windows 11 23H2 + 24H2 fresh installs
-- [ ] Restore `Microsoft.Diagnostics.Tracing.TraceEvent` NuGet ref and flip
-      the stub `EtwMonitor` to the real implementation
+      (preliminary verification on 26200 ✓)
 - [ ] Decide AOT / Avalonia migration (notes at bottom)
 
 ---
@@ -187,6 +195,41 @@ machine with NuGet access — you'll want `TraceEvent` for Phase 5.
 ---
 
 ## Status log (newest first)
+
+- **2026-06-14 — Phase 2 complete: real ETW per-process byte counting.**
+  - `EtwMonitor.cs` rewritten against
+    `Microsoft.Diagnostics.Tracing.TraceEvent`. Opens the NT Kernel Logger
+    (with defensive Stop of any orphan session from a prior crash), wires
+    handlers for the 8 TCP/UDP × send/recv × IPv4/IPv6 event flavours,
+    accumulates per-PID and per-Connection bytes into two pairs of
+    dictionaries (delta + cumulative).
+  - `DrainRates(interval)` snapshots the deltas into bytes/sec rates and
+    resets; `PidTotals()` / `ConnTotals()` return the cumulative copies.
+    `ForgetPids` drops dead pids from the totals so memory stays bounded.
+  - Single-lock thread safety across consumer-thread event handlers and
+    monitor-thread reads.
+  - Graceful fallback: if `TraceEventSession` construction throws (not
+    elevated, another consumer holds the kernel session), Available stays
+    false and NetworkMonitor uses its OS-counter path. The log records
+    exactly why.
+  - `NetPeekier.Native.csproj` now requires `Microsoft.Diagnostics.Tracing.TraceEvent 3.1.16`.
+    `dotnet restore` once and you're set.
+
+- **2026-06-14 — Phase 4 binding-mode bug + Diag logging.**
+  - `DataGridCheckBoxColumn` defaults to TwoWay binding, but the
+    `ProcessRow.Blocked` / `UsesWan` properties have private setters.
+    WPF threw `InvalidOperationException` at binding-attach time on the
+    first paint, before any window was visible. Fix: `Mode=OneWay` on
+    both bindings (the cells are display-only; toggling is done via the
+    Firewall menu).
+  - The Dispatcher unhandled-exception handler used to MessageBox-flood
+    on each cascading binding error. Now it uses `Interlocked.CompareExchange`
+    to show ONE dialog and shut down cleanly.
+  - Added `Diag` — a robust startup logger that never throws. Writes
+    breadcrumbs to `log/startup.log` (or fallback paths) so any future
+    "won't launch" issues land in a file the user can paste back.
+  - Verified end-to-end on Windows 11 26200: clean startup, WFP engine
+    opens, ListBlocked works, main window paints, clean shutdown.
 
 - **2026-06-14 — Rename collision fix + WFP layout bug.**
   - `NetPeekier.Native.Monitor` renamed to `NetworkMonitor` everywhere.
