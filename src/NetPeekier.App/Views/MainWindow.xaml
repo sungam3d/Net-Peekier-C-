@@ -114,8 +114,16 @@
                 <DataGridTextColumn Header="Total"           Binding="{Binding Total}"       Width="100" />
                 <DataGridTextColumn Header="Listening Ports" Binding="{Binding Listening}"   Width="160" />
                 <DataGridTextColumn Header="Tag"             Binding="{Binding Tag}"         Width="80"  />
-                <DataGridCheckBoxColumn Header="Blocked"     Binding="{Binding Blocked}"     Width="60"  />
-                <DataGridCheckBoxColumn Header="WAN"         Binding="{Binding UsesWan}"     Width="50"  />
+                <!--
+                  Mode=OneWay matters here: DataGridCheckBoxColumn defaults
+                  to TwoWay (so the user could toggle the cell), but the
+                  ProcessRow properties have private setters (display only;
+                  toggling is done from the menu / context). Without OneWay
+                  WPF throws InvalidOperationException at binding-attach
+                  time, on the first paint, before any window is visible.
+                -->
+                <DataGridCheckBoxColumn Header="Blocked"     Binding="{Binding Blocked, Mode=OneWay}" Width="60" />
+                <DataGridCheckBoxColumn Header="WAN"         Binding="{Binding UsesWan, Mode=OneWay}" Width="50" />
             </DataGrid.Columns>
         </DataGrid>
     </DockPanel>

@@ -60,24 +60,34 @@ public partial class App : Application
 
             // Dispatcher handler catches anything that escapes the UI thread —
             // includes failures inside InitializeComponent and bindings.
+            // We show ONE message box for the first crash; subsequent
+            // exceptions just go to the log so the user isn't drowned in
+            // dialogs while we're already shutting down.
+            int shown = 0;
             DispatcherUnhandledException += (s, args) =>
             {
                 Diag.LogException("Dispatcher.UnhandledException", args.Exception);
-                // Show a visible error so the user knows the app failed
-                // rather than silently disappearing. Mark Handled to prevent
-                // WPF's default crash UI from racing with our message box.
-                try
+                if (System.Threading.Interlocked.CompareExchange(ref shown, 1, 0) == 0)
                 {
-                    MessageBox.Show(
-                        $"Net-Peekier crashed:\n\n{args.Exception.GetType().Name}: {args.Exception.Message}\n\n" +
-                        $"Full details: {Diag.LogPath}",
-                        "Net-Peekier — fatal error",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
+                    try
+                    {
+                        MessageBox.Show(
+                            $"Net-Peekier crashed:\n\n{args.Exception.GetType().Name}: {args.Exception.Message}\n\n" +
+                            $"Full details: {Diag.LogPath}",
+                            "Net-Peekier — fatal error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error);
+                    }
+                    catch { /* if even the message box fails, give up gracefully */ }
+                    args.Handled = true;
+                    Shutdown(1);
                 }
-                catch { /* if even the message box fails, give up gracefully */ }
-                args.Handled = true;
-                Shutdown(1);
+                else
+                {
+                    // Already shutting down. Swallow so we don't show
+                    // duplicate dialogs while the dispatcher drains.
+                    args.Handled = true;
+                }
             };
 
             Diag.Log("Wiring LockdownPrompt");
