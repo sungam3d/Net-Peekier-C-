@@ -39,9 +39,24 @@ public sealed class EtwMonitor : IDisposable
     /// <summary>True if the kernel session is open and pumping events.</summary>
     public bool Available { get; private set; }
 
+    /// <summary>
+    /// Human-readable reason the session isn't running, surfaced in the
+    /// status bar so a failure is diagnosable without digging in the log.
+    /// Empty when Available is true.
+    /// </summary>
+    public string Unavailable { get; private set; } = "not started";
+
     private readonly ProcessMap _procmap;
     private TraceEventSession? _session;
     private Task? _consumer;
+
+    // On Windows 8+ a kernel/system trace session no longer has to be the
+    // machine-wide singleton "NT Kernel Logger". Using a unique name makes
+    // TraceEvent spin up a private SystemTraceProvider session, which avoids
+    // ERROR_ALREADY_EXISTS when something else (Defender, a perf tool, a
+    // crashed prior run) is holding the singleton — the most common reason
+    // the session fails to start even when elevated.
+    private const string SessionName = "NetPeekier-Kernel";
 
     // Thread sync: events arrive on the consumer thread; drains and totals
     // are read from the NetworkMonitor's tick thread. One lock guards all
@@ -60,27 +75,61 @@ public sealed class EtwMonitor : IDisposable
     public void Start()
     {
         if (Available) return;
+
+        // A precise elevation check from TraceEvent itself (independent of
+        // our WFP-handle-based one). If we're genuinely not elevated, say so
+        // plainly rather than emitting a confusing "another tool" message.
+        bool elevated;
+        try { elevated = TraceEventSession.IsElevated() == true; }
+        catch { elevated = false; }
+        if (!elevated)
+        {
+            Available = false;
+            Unavailable = "per-process speeds need Administrator (ETW kernel session).";
+            Diag.Log("EtwMonitor.Start: not elevated");
+            return;
+        }
+
+        // Attempt 1: a private kernel session (unique name). Works on Win8+
+        // and sidesteps the singleton conflict. Attempt 2: the legacy
+        // singleton "NT Kernel Logger" (stop any orphan first). We record
+        // whichever error we end up with.
+        if (TryStart(SessionName, out var err1)) return;
+        Diag.Log($"EtwMonitor.Start: private session failed ({err1}); trying singleton");
+
+        // Stop an orphaned singleton from a prior crashed run before retry.
         try
         {
-            // Defensively stop any orphan session from a previous crashed
-            // run. The NT Kernel Logger is a machine-wide singleton.
-            try
+            using var prev = new TraceEventSession(
+                KernelTraceEventParser.KernelSessionName,
+                TraceEventSessionOptions.Attach);
+            prev.Stop();
+        }
+        catch { /* nothing there; fine */ }
+
+        if (TryStart(KernelTraceEventParser.KernelSessionName, out var err2)) return;
+
+        Available = false;
+        Unavailable = $"ETW kernel session unavailable ({err2 ?? err1}). " +
+                      "Another tool may hold the kernel logger.";
+        Diag.Log("EtwMonitor.Start: " + Unavailable);
+    }
+
+    private bool TryStart(string sessionName, out string? error)
+    {
+        error = null;
+        try
+        {
+            Diag.Log($"EtwMonitor.TryStart: opening kernel session '{sessionName}'");
+            var session = new TraceEventSession(sessionName)
             {
-                using var prev = new TraceEventSession(
-                    KernelTraceEventParser.KernelSessionName,
-                    TraceEventSessionOptions.Attach);
-                prev.Stop();
-            }
-            catch { /* nothing was there; that's fine */ }
+                // Stop the OS session when our process exits rather than
+                // leaking it; TraceEvent re-creates it next run.
+                StopOnDispose = true,
+            };
+            session.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP);
 
-            Diag.Log("EtwMonitor.Start: opening NT Kernel Logger session");
-            _session = new TraceEventSession(KernelTraceEventParser.KernelSessionName);
-            _session.EnableKernelProvider(KernelTraceEventParser.Keywords.NetworkTCPIP);
-
-            // Wire up the eight event flavours. Send = outbound (up),
-            // Recv = inbound (down). For IPv6 the data class is named
-            // differently but the payload shape is the same.
-            var k = _session.Source.Kernel;
+            var k = session.Source.Kernel;
             k.TcpIpSend      += d => Add(d.ProcessID, d.size, "TCP", d.saddr, d.sport, d.daddr, d.dport, outbound: true);
             k.TcpIpRecv      += d => Add(d.ProcessID, d.size, "TCP", d.daddr, d.dport, d.saddr, d.sport, outbound: false);
             k.TcpIpSendIPV6  += d => Add(d.ProcessID, d.size, "TCP", d.saddr, d.sport, d.daddr, d.dport, outbound: true);
@@ -90,24 +139,26 @@ public sealed class EtwMonitor : IDisposable
             k.UdpIpSendIPV6  += d => Add(d.ProcessID, d.size, "UDP", d.saddr, d.sport, d.daddr, d.dport, outbound: true);
             k.UdpIpRecvIPV6  += d => Add(d.ProcessID, d.size, "UDP", d.daddr, d.dport, d.saddr, d.sport, outbound: false);
 
-            // Process() blocks; run it on a background thread.
+            _session = session;
             _consumer = Task.Run(() =>
             {
-                try { _session.Source.Process(); }
+                try { session.Source.Process(); }
                 catch (Exception ex) { Diag.LogException("EtwMonitor.consumer", ex); }
             });
 
             Available = true;
-            Diag.Log("EtwMonitor.Start: session active");
+            Unavailable = "";
+            Diag.Log($"EtwMonitor.TryStart: session '{sessionName}' active");
+            return true;
         }
         catch (Exception ex)
         {
-            // Most likely cause: not elevated, or another consumer already
-            // holds the kernel logger. Either way, fall back to no-ETW mode.
-            Diag.LogException("EtwMonitor.Start", ex);
-            Available = false;
+            error = ex.Message;
+            Diag.LogException($"EtwMonitor.TryStart[{sessionName}]", ex);
             try { _session?.Dispose(); } catch { /* ignore */ }
             _session = null;
+            Available = false;
+            return false;
         }
     }
 

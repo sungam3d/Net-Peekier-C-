@@ -53,6 +53,8 @@ public sealed class NetworkMonitor : IDisposable
 
     public string BackendName => Backend.Available ? "ETW Kernel-Network" : "connection table (no per-process bytes)";
     public bool HasPerProcessSpeed => Backend.Available;
+    /// <summary>Why per-process byte counting isn't running (empty if it is).</summary>
+    public string BackendUnavailableReason => Backend.Unavailable;
 
     private readonly object _gate = new();
     private List<ProcStat> _procs = new();

@@ -341,11 +341,26 @@ public sealed class MainViewModel : ObservableObject
         UpdateSystemStats();
 
         var admin = _monitor.Firewall is not null;
-        var backend = _monitor.HasPerProcessSpeed
-            ? $"{_monitor.BackendName}: live per-process speeds"
-            : "connection table only — per-process speeds need elevation";
-        var extra = admin ? "" : "   |   NOT elevated: run as Administrator for full visibility";
-        Status = $"{backend}{extra}";
+        string backend;
+        if (_monitor.HasPerProcessSpeed)
+        {
+            backend = $"{_monitor.BackendName}: live per-process speeds";
+        }
+        else if (!admin)
+        {
+            backend = "connection table only — run as Administrator for per-process speeds";
+        }
+        else
+        {
+            // Elevated but ETW still didn't start — surface the actual reason
+            // (e.g. another tool holds the kernel logger) instead of blaming
+            // elevation, which the user has already granted.
+            var reason = _monitor.BackendUnavailableReason;
+            backend = string.IsNullOrEmpty(reason)
+                ? "connection table only — per-process speeds unavailable"
+                : $"connection table only — {reason}";
+        }
+        Status = backend;
 
         ReconcileTree(procs, unit);
     }
