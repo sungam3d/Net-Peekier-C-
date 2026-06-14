@@ -45,18 +45,18 @@ machine.
 The split keeps the Core layer testable on any machine and lets you swap GUIs
 (WPF → Avalonia for the AOT path, say) without disturbing the engine.
 
-## Optional: hardware temperatures
+## Hardware temperatures
 
-The System Stats window (View → Statistics) shows CPU/GPU/RAM load and clock
-out of the box. Temperatures and GPU load/clock need a sensor library:
+The System Stats window (View → Statistics) shows CPU/GPU/RAM load and clock,
+plus temperatures and GPU details. The sensor library
+(LibreHardwareMonitorLib, MPL-2.0) is bundled via NuGet — there's nothing to
+install by hand.
 
-1. Download `LibreHardwareMonitorLib.dll` (from the LibreHardwareMonitor
-   project or its NuGet package).
-2. Drop it next to `NetPeekier.exe`.
-3. Restart Net-Peekier (elevated — sensors need admin).
-
-If the dll isn't present, those fields just show `--`; everything else works.
-The dll is loaded by reflection, so it's a pure drop-in with no rebuild.
+Reading hardware sensors needs administrator privileges (the embedded
+manifest already requests this). If you launch without elevation, load/clock
+still work but temperatures show `--` and the status bar says so. Some
+motherboard sensors additionally need the PawnIO driver; CPU/GPU temps
+generally work without it.
 
 ## Optional: per-process byte rates (ETW)
 

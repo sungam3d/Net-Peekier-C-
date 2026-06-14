@@ -204,6 +204,24 @@ machine with NuGet access — you'll want `TraceEvent` for Phase 5.
 
 ## Status log (newest first)
 
+- **2026-06-14 — LibreHardwareMonitor bundled via NuGet (no more drop-in dll).**
+  - The reflection-loaded "drop LibreHardwareMonitorLib.dll next to the exe"
+    approach was confusing in practice (the dll has to sit beside the
+    *published* exe, not the build output, and the published single-file
+    exe self-extracts to a temp dir, so a hand-placed dll wasn't found).
+    Replaced it with a proper `LibreHardwareMonitorLib` 0.9.6 NuGet
+    reference (MPL-2.0, ships its dll + native helper automatically).
+  - `SystemStats.cs` LibreHwmBridge rewritten from reflection to the typed
+    Computer / IVisitor / IHardware / ISensor API (matches the library's
+    official sample). GPU type detection is by enum-name prefix so it's
+    robust across library-version enum renames (GpuAti → GpuAmd). Sensor
+    selection (_pick / _pick_temp) unchanged.
+  - Single-file publish already had `IncludeNativeLibrariesForSelfExtract`,
+    so the native WinRing0 helper rides along — nothing for the user to
+    place by hand now. Temps need admin (manifest already requires it).
+  - Added THIRD-PARTY-LICENSES.md for MPL-2.0 compliance.
+  - 97/97 tests still pass.
+
 - **2026-06-14 — Hierarchical app list + stats polish.**
   - Main list is now a grouped tree (TreeView): processes cluster by name,
     so the dozens of svchost.exe instances collapse under one expandable

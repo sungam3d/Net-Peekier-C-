@@ -34,6 +34,10 @@
          rather than the shared framework. -->
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+    <!-- Hardware temperatures + GPU details. MPL-2.0 licensed; ships its dll
+         (and the native helper) next to the exe automatically. No manual
+         drop-in needed. Reading the sensors requires running as admin. -->
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
   </ItemGroup>
 
 </Project>

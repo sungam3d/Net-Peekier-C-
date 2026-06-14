@@ -50,7 +50,7 @@ public partial class StatsWindow : Window
         RamTemp.Text  = Temp(s.RamTemp);
 
         SourceLine.Text = _sys.TempSource == "none"
-            ? "Temperatures: no sensor library (drop LibreHardwareMonitorLib.dll next to the exe)"
+            ? "Temperatures unavailable — run as administrator to enable hardware sensors"
             : $"Temperatures: {_sys.TempSource}";
     }
 
