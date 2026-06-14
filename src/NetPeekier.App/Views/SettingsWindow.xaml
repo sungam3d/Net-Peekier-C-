@@ -38,7 +38,7 @@
             <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center"
                        Text="Hide idle processes after:" />
             <DockPanel Grid.Row="1" Grid.Column="1" VerticalAlignment="Center">
-                <TextBlock Text=" minutes (blank = never hide)"
+                <TextBlock Text=" minutes (0 = instantly, blank = never)"
                            DockPanel.Dock="Right" Foreground="#666"
                            VerticalAlignment="Center" Margin="6,0,0,0" />
                 <TextBox x:Name="IdleBox" Width="80" HorizontalAlignment="Left" />
@@ -60,11 +60,11 @@
                 <TextBox x:Name="AllowMinBox" Width="80" HorizontalAlignment="Left" />
             </DockPanel>
 
-            <!-- linger / forget pids -->
+            <!-- packet-log retention -->
             <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center"
-                       Text="Keep idle processes for:" />
+                       Text="Keep packet logs for:" />
             <DockPanel Grid.Row="4" Grid.Column="1" VerticalAlignment="Center">
-                <TextBlock Text=" minutes (blank = forget immediately)" DockPanel.Dock="Right"
+                <TextBlock Text=" minutes (blank = keep until buffer is full)" DockPanel.Dock="Right"
                            Foreground="#666" VerticalAlignment="Center" Margin="6,0,0,0" />
                 <TextBox x:Name="PurgeBox" Width="80" HorizontalAlignment="Left" />
             </DockPanel>

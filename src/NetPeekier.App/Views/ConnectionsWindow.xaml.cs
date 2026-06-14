@@ -23,6 +23,8 @@ public partial class ConnectionsWindow : Window
         Header.Text = $"Connections — {processName} (PID {pid})";
         Title       = $"Connections — {processName} (PID {pid})";
 
+        PopulateExeInfo();
+
         _timer = new DispatcherTimer(DispatcherPriority.Background)
         {
             Interval = TimeSpan.FromMilliseconds(1000),
@@ -34,6 +36,56 @@ public partial class ConnectionsWindow : Window
 
         Refresh();
     }
+
+    /// <summary>
+    /// Resolve the process's executable and show its path plus details pulled
+    /// from the file (description, company, version, size). Everything is
+    /// best-effort — protected processes may not expose a path.
+    /// </summary>
+    private void PopulateExeInfo()
+    {
+        string exe = "";
+        try { exe = _monitor.ProcessMap.Exe(_pid); } catch { /* ignore */ }
+
+        if (string.IsNullOrEmpty(exe))
+        {
+            ExePath.Text    = "(unavailable — try running as Administrator)";
+            ExeDesc.Text    = "—";
+            ExeCompany.Text = "—";
+            ExeVersion.Text = "—";
+            return;
+        }
+
+        ExePath.Text = exe;
+        try
+        {
+            if (System.IO.File.Exists(exe))
+            {
+                var fvi = System.Diagnostics.FileVersionInfo.GetVersionInfo(exe);
+                ExeDesc.Text    = NonEmpty(fvi.FileDescription, "—");
+                ExeCompany.Text = NonEmpty(fvi.CompanyName, "—");
+
+                var fi = new System.IO.FileInfo(exe);
+                var ver  = NonEmpty(fvi.ProductVersion ?? fvi.FileVersion, "");
+                var sizeMb = fi.Length / (1024.0 * 1024.0);
+                ExeVersion.Text = string.IsNullOrEmpty(ver)
+                    ? $"{sizeMb:0.0} MB"
+                    : $"{ver}   ({sizeMb:0.0} MB)";
+            }
+            else
+            {
+                ExeDesc.Text = ExeCompany.Text = ExeVersion.Text = "(file not found)";
+            }
+        }
+        catch (Exception ex)
+        {
+            NetPeekier.Core.Diag.LogException("ConnectionsWindow.PopulateExeInfo", ex);
+            ExeDesc.Text = ExeCompany.Text = ExeVersion.Text = "—";
+        }
+    }
+
+    private static string NonEmpty(string? s, string fallback) =>
+        string.IsNullOrWhiteSpace(s) ? fallback : s.Trim();
 
     private void Refresh()
     {

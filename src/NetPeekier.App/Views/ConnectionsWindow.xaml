@@ -5,7 +5,32 @@
         Width="780" Height="500" MinWidth="600" MinHeight="320">
 
     <DockPanel>
-        <TextBlock x:Name="Header" DockPanel.Dock="Top" Margin="8" FontWeight="Bold" />
+        <Border DockPanel.Dock="Top" Background="#eef1f4"
+                BorderBrush="#d0d5da" BorderThickness="0,0,0,1" Padding="10,8">
+            <StackPanel>
+                <TextBlock x:Name="Header" FontWeight="Bold" FontSize="13" />
+                <Grid Margin="0,6,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Path: "        Foreground="#555" Margin="0,0,6,2" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="ExePath"     TextTrimming="CharacterEllipsis" FontFamily="Consolas" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Description: " Foreground="#555" Margin="0,0,6,2" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="ExeDesc" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Company: "     Foreground="#555" Margin="0,0,6,2" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="ExeCompany" />
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Version / size: " Foreground="#555" Margin="0,0,6,0" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" x:Name="ExeVersion" />
+                </Grid>
+            </StackPanel>
+        </Border>
 
         <StatusBar DockPanel.Dock="Bottom">
             <StatusBarItem><TextBlock x:Name="StatusLine" Text="" /></StatusBarItem>

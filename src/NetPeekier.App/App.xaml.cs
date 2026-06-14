@@ -49,6 +49,22 @@ public partial class App : Application
             // It is NOT started here — capture has overhead, so we start it
             // lazily the first time the user opens the Packets window.
             PacketCapture = new PacketCapture(NetworkMonitor.ProcessMap);
+            // When a process goes idle (or dies) and is dropped from the list,
+            // clear its captured packets too so the packet log doesn't keep
+            // stale entries around.
+            NetworkMonitor.OnPidIdle = pid =>
+            {
+                try { PacketCapture?.ForgetPid(pid); } catch { /* never throw from tick */ }
+            };
+            // Apply the "Keep packet logs for N minutes" retention each tick.
+            NetworkMonitor.OnTick = () =>
+            {
+                var mins = NetworkMonitor.Settings.PacketPurgeMinutes;
+                if (mins is int m && m > 0)
+                {
+                    try { PacketCapture?.PurgeOlderThan(m * 60.0); } catch { /* ignore */ }
+                }
+            };
         }
         catch (Exception ex)
         {

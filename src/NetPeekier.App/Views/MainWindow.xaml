@@ -156,8 +156,9 @@
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="64" />
+                        <ColumnDefinition Width="74" />
+                        <ColumnDefinition Width="64" />
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -174,18 +175,18 @@
                     <TextBlock Grid.Row="1" Grid.Column="3" Style="{StaticResource SysHeader}" Text="TEMP" />
 
                     <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource SysRowLabel}" Text="CPU" />
-                    <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource SysVal}" Foreground="#ffb454" MinWidth="46" Text="{Binding CpuLoad}" />
-                    <TextBlock Grid.Row="2" Grid.Column="2" Style="{StaticResource SysVal}" Foreground="#8fb6c8" MinWidth="62" Text="{Binding CpuClock}" />
-                    <TextBlock Grid.Row="2" Grid.Column="3" Style="{StaticResource SysVal}" Foreground="#8fb6c8" MinWidth="46" Text="{Binding CpuTemp}" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource SysVal}" Foreground="#ffb454" Text="{Binding CpuLoad}" />
+                    <TextBlock Grid.Row="2" Grid.Column="2" Style="{StaticResource SysVal}" Foreground="#8fb6c8" Text="{Binding CpuClock}" />
+                    <TextBlock Grid.Row="2" Grid.Column="3" Style="{StaticResource SysVal}" Foreground="#8fb6c8" Text="{Binding CpuTemp}" />
 
                     <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource SysRowLabel}" Text="GPU" />
-                    <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource SysVal}" Foreground="#7fe3ff" MinWidth="46" Text="{Binding GpuLoad}" />
-                    <TextBlock Grid.Row="3" Grid.Column="2" Style="{StaticResource SysVal}" Foreground="#8fb6c8" MinWidth="62" Text="{Binding GpuClock}" />
-                    <TextBlock Grid.Row="3" Grid.Column="3" Style="{StaticResource SysVal}" Foreground="#8fb6c8" MinWidth="46" Text="{Binding GpuTemp}" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource SysVal}" Foreground="#7fe3ff" Text="{Binding GpuLoad}" />
+                    <TextBlock Grid.Row="3" Grid.Column="2" Style="{StaticResource SysVal}" Foreground="#8fb6c8" Text="{Binding GpuClock}" />
+                    <TextBlock Grid.Row="3" Grid.Column="3" Style="{StaticResource SysVal}" Foreground="#8fb6c8" Text="{Binding GpuTemp}" />
 
                     <!-- RAM: load only. Clock + temp removed per request. -->
                     <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource SysRowLabel}" Text="RAM" />
-                    <TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource SysVal}" Foreground="#a6e3a1" MinWidth="46" Text="{Binding RamLoad}" />
+                    <TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource SysVal}" Foreground="#a6e3a1" Text="{Binding RamLoad}" />
                 </Grid>
             </Grid>
         </Border>

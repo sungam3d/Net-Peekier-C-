@@ -79,6 +79,40 @@ public sealed class PacketCapture : IDisposable
         lock (_gate) { _buffer.Clear(); }
     }
 
+    /// <summary>Drop all captured packets belonging to a pid (it went idle).</summary>
+    public void ForgetPid(int pid)
+    {
+        lock (_gate)
+        {
+            var node = _buffer.First;
+            while (node is not null)
+            {
+                var next = node.Next;
+                if (node.Value.Pid == pid) _buffer.Remove(node);
+                node = next;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Drop packets older than the given age in seconds. Called from the
+    /// monitor tick using the "Keep packet logs for" preference, so the hex
+    /// view retains only recent traffic. 0 / negative = keep everything (up to
+    /// the ring-buffer capacity).
+    /// </summary>
+    public void PurgeOlderThan(double maxAgeSeconds)
+    {
+        if (maxAgeSeconds <= 0) return;
+        double cutoff = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0 - maxAgeSeconds;
+        lock (_gate)
+        {
+            // Packets are appended in time order, so the oldest are at the
+            // front — remove from the front until we hit a fresh one.
+            while (_buffer.First is { } f && f.Value.Timestamp < cutoff)
+                _buffer.RemoveFirst();
+        }
+    }
+
     /// <summary>Newest-first snapshot of the buffer (optionally PID-filtered).</summary>
     public IReadOnlyList<CapturedPacket> Snapshot(int max = 2000)
     {

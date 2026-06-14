@@ -51,7 +51,7 @@ public partial class SettingsWindow : Window
         int? purge = null;
         if (!string.IsNullOrWhiteSpace(PurgeBox.Text))
         {
-            if (!int.TryParse(PurgeBox.Text.Trim(), out var n) || n < 0) { Bad("Forget-pids minutes: not a non-negative integer."); return; }
+            if (!int.TryParse(PurgeBox.Text.Trim(), out var n) || n < 0) { Bad("Packet-log minutes: not a non-negative integer."); return; }
             purge = n;
         }
 
