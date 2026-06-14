@@ -6,7 +6,7 @@
 // same channel Resource Monitor and PerfView use.
 //
 // STATUS: Phase 2 TODO. The shape below mirrors capture.CaptureBackend's
-// public interface so Monitor.cs can drive it identically.
+// public interface so NetworkMonitor.cs can drive it identically.
 //
 // IMPLEMENTATION NOTES (for when we fill this in):
 //
@@ -38,14 +38,14 @@ public sealed class EtwMonitor : IDisposable
 
     /// <summary>
     /// Start the kernel ETW session. The stub is a no-op that leaves
-    /// <see cref="Available"/> false; the Monitor then falls back to
+    /// <see cref="Available"/> false; the NetworkMonitor then falls back to
     /// <c>NetworkInterface.GetIPStatistics()</c> for system-wide totals
     /// (same behaviour as the Python build without WinDivert).
     /// </summary>
     public void Start()
     {
         // Phase 2 TODO: open kernel ETW session, set Available = true.
-        // Until that lands, leaving Available=false means Monitor uses its
+        // Until that lands, leaving Available=false means NetworkMonitor uses its
         // OS-counter fallback path; that's the correct degraded behaviour.
     }
 

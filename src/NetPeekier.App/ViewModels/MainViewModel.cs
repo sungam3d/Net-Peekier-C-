@@ -18,11 +18,11 @@ public sealed class MainViewModel : ObservableObject
 {
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMilliseconds(1000);
 
-    private readonly Monitor _monitor;
+    private readonly NetworkMonitor _monitor;
     private readonly DispatcherTimer _timer;
     private readonly Dictionary<int, ProcessRow> _rowByPid = new();
 
-    public MainViewModel(Monitor monitor)
+    public MainViewModel(NetworkMonitor monitor)
     {
         _monitor = monitor;
 

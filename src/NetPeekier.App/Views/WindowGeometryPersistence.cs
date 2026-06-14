@@ -20,7 +20,7 @@ internal static class WindowGeometryPersistence
     /// <summary>Wire a window so its geometry restores on open and saves on close.</summary>
     public static void Apply(Window window, string key)
     {
-        var monitor = ((App)System.Windows.Application.Current).Monitor;
+        var monitor = ((App)System.Windows.Application.Current).NetworkMonitor;
         var s = monitor.Settings;
 
         if (s.WindowGeometryFor(key) is { } geo) ApplyString(window, geo);

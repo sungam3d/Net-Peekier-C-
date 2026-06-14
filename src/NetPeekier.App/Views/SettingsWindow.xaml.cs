@@ -12,12 +12,12 @@ namespace NetPeekier.App.Views;
 /// </summary>
 public partial class SettingsWindow : Window
 {
-    private readonly Monitor _monitor;
+    private readonly NetworkMonitor _monitor;
 
     public SettingsWindow()
     {
         InitializeComponent();
-        _monitor = ((App)System.Windows.Application.Current).Monitor;
+        _monitor = ((App)System.Windows.Application.Current).NetworkMonitor;
         Load();
     }
 

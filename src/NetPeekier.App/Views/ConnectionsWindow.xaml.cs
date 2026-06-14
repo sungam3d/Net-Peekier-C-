@@ -12,14 +12,14 @@ namespace NetPeekier.App.Views;
 public partial class ConnectionsWindow : Window
 {
     private readonly int _pid;
-    private readonly Monitor _monitor;
+    private readonly NetworkMonitor _monitor;
     private readonly DispatcherTimer _timer;
 
     public ConnectionsWindow(int pid, string processName)
     {
         InitializeComponent();
         _pid = pid;
-        _monitor = ((App)System.Windows.Application.Current).Monitor;
+        _monitor = ((App)System.Windows.Application.Current).NetworkMonitor;
         Header.Text = $"Connections — {processName} (PID {pid})";
         Title       = $"Connections — {processName} (PID {pid})";
 

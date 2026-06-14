@@ -7,11 +7,11 @@ namespace NetPeekier.App;
 
 public partial class App : Application
 {
-    public Monitor Monitor { get; } = new(TimeSpan.FromSeconds(1));
+    public NetworkMonitor NetworkMonitor { get; } = new(TimeSpan.FromSeconds(1));
 
     // Per-exe prompt suppression: once we've shown the dialog for an exe,
     // don't show it again until the monitor reports the same exe again
-    // through LockdownPrompt (Monitor itself dedupes via _lockdownPending).
+    // through LockdownPrompt (NetworkMonitor itself dedupes via _lockdownPending).
     private readonly HashSet<string> _promptedExes = new(StringComparer.OrdinalIgnoreCase);
 
     protected override void OnStartup(StartupEventArgs e)
@@ -19,9 +19,9 @@ public partial class App : Application
         base.OnStartup(e);
         // Wire the lockdown callback BEFORE Start so the first sweep can
         // surface prompts.
-        Monitor.LockdownPrompt = ShowLockdownPrompt;
+        NetworkMonitor.LockdownPrompt = ShowLockdownPrompt;
 
-        try { Monitor.Start(); }
+        try { NetworkMonitor.Start(); }
         catch (Exception ex)
         {
             MessageBox.Show(
@@ -34,8 +34,8 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        try { Monitor.Stop(); } catch { /* ignore */ }
-        try { Monitor.Dispose(); } catch { /* ignore */ }
+        try { NetworkMonitor.Stop(); } catch { /* ignore */ }
+        try { NetworkMonitor.Dispose(); } catch { /* ignore */ }
         base.OnExit(e);
     }
 

@@ -194,17 +194,19 @@ internal static class Native
         public IntPtr Data;
     }
 
-    // FWP_VALUE0 / FWP_CONDITION_VALUE0 are tagged unions. We model them as a
-    // type tag plus a single IntPtr-sized "value" slot; helpers in
-    // WfpConditions.cs build them by allocating the larger payloads
-    // (FWP_BYTE_BLOB, FWP_V6_ADDR_AND_MASK, etc.) on the unmanaged heap and
-    // storing the pointer in the union.
+    // FWP_VALUE0 / FWP_CONDITION_VALUE0 are tagged unions. In C they are
+    // { FWP_DATA_TYPE type; <padding to ptr alignment>; <union of 8-byte
+    // pointer or smaller primitive> } — 16 bytes on x64. We let the C#
+    // marshaller compute that padding automatically by putting the uint
+    // first and the IntPtr second under [StructLayout(Sequential)]:
+    // Type lands at offset 0, ValuePtr at offset 8 (natural pointer
+    // alignment), total size 16. DO NOT add an explicit padding field —
+    // that breaks downstream field offsets in FWPM_FILTER0.
     [StructLayout(LayoutKind.Sequential)]
     public struct FWP_VALUE0
     {
         public uint   Type;
         public IntPtr ValuePtr;        // union slot; biggest member is a pointer
-        public uint   _padding;        // FWP_VALUE0 is 16 bytes on x64 (4 tag + 4 pad + 8 ptr)
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -212,6 +214,5 @@ internal static class Native
     {
         public uint   Type;
         public IntPtr ValuePtr;
-        public uint   _padding;
     }
 }

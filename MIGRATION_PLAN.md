@@ -188,6 +188,24 @@ machine with NuGet access — you'll want `TraceEvent` for Phase 5.
 
 ## Status log (newest first)
 
+- **2026-06-14 — Rename collision fix + WFP layout bug.**
+  - `NetPeekier.Native.Monitor` renamed to `NetworkMonitor` everywhere.
+    WPF's implicit usings bring in `System.Threading.Monitor`, which
+    collided with our class — every App-project source got CS0104. New
+    name is more descriptive and self-documenting.
+  - `FWP_VALUE0` / `FWP_CONDITION_VALUE0` had a wrongly-added `_padding`
+    field. On x64 the natural alignment of `IntPtr` after a `uint`
+    already gives the correct 16-byte layout; the extra padding made the
+    struct 24 bytes and would have corrupted downstream offsets in
+    `FWPM_FILTER0`. Removed.
+  - Added `scripts/Verify-WFP.ps1` — admin-elevated PowerShell that
+    drives a manual smoke-test of the WFP path against
+    `netsh wfp show filters`.
+  - WPF MainWindow has `d:IsDesignTimeCreatable=False` to stop the XAML
+    designer from trying to instantiate `MainViewModel` (which takes a
+    `NetworkMonitor` constructor arg).
+  - 97/97 tests still passing.
+
 - **2026-06-13 — Phase 4 functionally complete.**
   - SettingsWindow with full validation (LAN ranges checked via IpCalc;
     minutes fields parsed and bounded). On OK, calls

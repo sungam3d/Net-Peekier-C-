@@ -12,7 +12,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         var app = (App)System.Windows.Application.Current;
-        _vm = new MainViewModel(app.Monitor);
+        _vm = new MainViewModel(app.NetworkMonitor);
         DataContext = _vm;
         Closed += (_, _) => _vm.Stop();
         WindowGeometryPersistence.Apply(this, "main");

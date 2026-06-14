@@ -5,7 +5,7 @@ namespace NetPeekier.App.Views;
 
 /// <summary>
 /// Shown when lockdown mode catches an unfamiliar exe. Buttons map to the
-/// three Monitor methods that resolve the decision:
+/// three NetworkMonitor methods that resolve the decision:
 ///   - Block permanently → SetBlocked(exe, true)
 ///   - Temp allow        → AllowTemporarily(exe, Settings.AllowMinutes)
 ///   - Allow permanently → SetAllowed(exe, true)
@@ -13,13 +13,13 @@ namespace NetPeekier.App.Views;
 public partial class LockdownDialog : Window
 {
     private readonly string _exe;
-    private readonly Monitor _monitor;
+    private readonly NetworkMonitor _monitor;
 
     public LockdownDialog(string exe, string processName)
     {
         InitializeComponent();
         _exe = exe;
-        _monitor = ((App)System.Windows.Application.Current).Monitor;
+        _monitor = ((App)System.Windows.Application.Current).NetworkMonitor;
         NameLabel.Text = processName;
         ExeLabel.Text  = exe;
     }

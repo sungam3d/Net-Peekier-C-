@@ -6,17 +6,17 @@ namespace NetPeekier.App.Views;
 
 /// <summary>
 /// One-stop view of the firewall state: which exes are blocked, and what
-/// per-IP rules are configured. Edits go through the Monitor, which keeps
+/// per-IP rules are configured. Edits go through the NetworkMonitor, which keeps
 /// settings and the live WFP state in sync.
 /// </summary>
 public partial class FirewallWindow : Window
 {
-    private readonly Monitor _monitor;
+    private readonly NetworkMonitor _monitor;
 
     public FirewallWindow()
     {
         InitializeComponent();
-        _monitor = ((App)System.Windows.Application.Current).Monitor;
+        _monitor = ((App)System.Windows.Application.Current).NetworkMonitor;
         WindowGeometryPersistence.Apply(this, "firewall");
         Refresh();
     }
