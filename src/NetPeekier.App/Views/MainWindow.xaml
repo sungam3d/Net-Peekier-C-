@@ -91,40 +91,111 @@
             </Border>
         </Grid>
 
-        <!-- App list -->
-        <DataGrid x:Name="AppGrid"
-                  ItemsSource="{Binding Processes}"
-                  SelectedItem="{Binding Selected, Mode=TwoWay}"
-                  AutoGenerateColumns="False"
-                  CanUserAddRows="False"
-                  CanUserDeleteRows="False"
-                  IsReadOnly="True"
-                  HeadersVisibility="Column"
-                  GridLinesVisibility="Horizontal"
-                  AlternationCount="2"
-                  RowBackground="White"
-                  AlternatingRowBackground="#F5F7FA"
-                  SelectionMode="Single"
-                  MouseDoubleClick="OnRowDoubleClick">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Process"         Binding="{Binding Name}"        Width="180" />
-                <DataGridTextColumn Header="PID"             Binding="{Binding Pid}"         Width="60"  />
-                <DataGridTextColumn Header="↑ Upload"        Binding="{Binding Up}"          Width="100" />
-                <DataGridTextColumn Header="↓ Download"      Binding="{Binding Down}"        Width="100" />
-                <DataGridTextColumn Header="Total"           Binding="{Binding Total}"       Width="100" />
-                <DataGridTextColumn Header="Listening Ports" Binding="{Binding Listening}"   Width="160" />
-                <DataGridTextColumn Header="Tag"             Binding="{Binding Tag}"         Width="80"  />
-                <!--
-                  Mode=OneWay matters here: DataGridCheckBoxColumn defaults
-                  to TwoWay (so the user could toggle the cell), but the
-                  ProcessRow properties have private setters (display only;
-                  toggling is done from the menu / context). Without OneWay
-                  WPF throws InvalidOperationException at binding-attach
-                  time, on the first paint, before any window is visible.
-                -->
-                <DataGridCheckBoxColumn Header="Blocked"     Binding="{Binding Blocked, Mode=OneWay}" Width="60" />
-                <DataGridCheckBoxColumn Header="WAN"         Binding="{Binding UsesWan, Mode=OneWay}" Width="50" />
-            </DataGrid.Columns>
-        </DataGrid>
+        <!-- App list (grouped tree: process name -> PIDs) -->
+        <DockPanel>
+            <!-- Column header strip, aligned to the templates below. The
+                 left pad (28px) lines the headers up past the TreeView's
+                 expander toggle so columns sit under their data. -->
+            <Border DockPanel.Dock="Top" Background="#EEF1F4"
+                    BorderBrush="#D0D5DA" BorderThickness="0,0,0,1">
+                <Grid Margin="28,4,16,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="200" />
+                        <ColumnDefinition Width="90"  />
+                        <ColumnDefinition Width="90"  />
+                        <ColumnDefinition Width="90"  />
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="70"  />
+                        <ColumnDefinition Width="55"  />
+                        <ColumnDefinition Width="*"   />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Process"         FontWeight="Bold" />
+                    <TextBlock Grid.Column="1" Text="↑ Upload"        FontWeight="Bold" />
+                    <TextBlock Grid.Column="2" Text="↓ Download"      FontWeight="Bold" />
+                    <TextBlock Grid.Column="3" Text="Total"           FontWeight="Bold" />
+                    <TextBlock Grid.Column="4" Text="Listening Ports" FontWeight="Bold" />
+                    <TextBlock Grid.Column="5" Text="Tag"             FontWeight="Bold" />
+                    <TextBlock Grid.Column="6" Text="Blocked"         FontWeight="Bold" />
+                    <TextBlock Grid.Column="7" Text="WAN"             FontWeight="Bold" />
+                </Grid>
+            </Border>
+
+            <TreeView x:Name="AppTree"
+                      ItemsSource="{Binding Groups}"
+                      SelectedItemChanged="OnTreeSelectionChanged"
+                      MouseDoubleClick="OnRowDoubleClick"
+                      BorderThickness="0"
+                      VirtualizingStackPanel.IsVirtualizing="True"
+                      VirtualizingStackPanel.VirtualizationMode="Recycling">
+
+                <TreeView.Resources>
+                    <!-- Shared row layout used by both group and leaf rows so
+                         columns line up regardless of node depth. -->
+                    <Style x:Key="RowCell" TargetType="TextBlock">
+                        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                        <Setter Property="VerticalAlignment" Value="Center" />
+                    </Style>
+
+                    <!-- Leaf (PID) template. -->
+                    <DataTemplate x:Key="LeafTemplate">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="200" />
+                                <ColumnDefinition Width="90"  />
+                                <ColumnDefinition Width="90"  />
+                                <ColumnDefinition Width="90"  />
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="70"  />
+                                <ColumnDefinition Width="55"  />
+                                <ColumnDefinition Width="*"   />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding Display}"   Style="{StaticResource RowCell}" Foreground="#555" />
+                            <TextBlock Grid.Column="1" Text="{Binding Up}"        Style="{StaticResource RowCell}" FontFamily="Consolas" />
+                            <TextBlock Grid.Column="2" Text="{Binding Down}"      Style="{StaticResource RowCell}" FontFamily="Consolas" />
+                            <TextBlock Grid.Column="3" Text="{Binding Total}"     Style="{StaticResource RowCell}" FontFamily="Consolas" />
+                            <TextBlock Grid.Column="4" Text="{Binding Listening}" Style="{StaticResource RowCell}" />
+                            <TextBlock Grid.Column="5" Text="{Binding Tag}"       Style="{StaticResource RowCell}" />
+                            <CheckBox  Grid.Column="6" IsChecked="{Binding Blocked, Mode=OneWay}" IsHitTestVisible="False" VerticalAlignment="Center" />
+                            <CheckBox  Grid.Column="7" IsChecked="{Binding UsesWan, Mode=OneWay}" IsHitTestVisible="False" VerticalAlignment="Center" />
+                        </Grid>
+                    </DataTemplate>
+                </TreeView.Resources>
+
+                <!-- Group (process-name) template: hierarchical, children are
+                     ProcessRow leaves rendered with the leaf template. -->
+                <TreeView.ItemTemplate>
+                    <HierarchicalDataTemplate ItemsSource="{Binding Children}"
+                                              ItemTemplate="{StaticResource LeafTemplate}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="200" />
+                                <ColumnDefinition Width="90"  />
+                                <ColumnDefinition Width="90"  />
+                                <ColumnDefinition Width="90"  />
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="70"  />
+                                <ColumnDefinition Width="55"  />
+                                <ColumnDefinition Width="*"   />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding Display}"   FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="1" Text="{Binding Up}"        FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="{Binding Down}"      FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="3" Text="{Binding Total}"     FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="4" Text="{Binding Listening}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="5" Text="{Binding Tag}"       VerticalAlignment="Center" />
+                            <CheckBox  Grid.Column="6" IsChecked="{Binding Blocked, Mode=OneWay}" IsHitTestVisible="False" VerticalAlignment="Center" />
+                            <CheckBox  Grid.Column="7" IsChecked="{Binding UsesWan, Mode=OneWay}" IsHitTestVisible="False" VerticalAlignment="Center" />
+                        </Grid>
+                    </HierarchicalDataTemplate>
+                </TreeView.ItemTemplate>
+
+                <TreeView.ItemContainerStyle>
+                    <Style TargetType="TreeViewItem">
+                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                        <Setter Property="Padding" Value="2" />
+                    </Style>
+                </TreeView.ItemContainerStyle>
+            </TreeView>
+        </DockPanel>
     </DockPanel>
 </Window>

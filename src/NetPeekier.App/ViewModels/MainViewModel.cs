@@ -21,6 +21,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly NetworkMonitor _monitor;
     private readonly DispatcherTimer _timer;
     private readonly Dictionary<int, ProcessRow> _rowByPid = new();
+    private readonly Dictionary<string, ProcessGroup> _groupByName = new();
 
     public MainViewModel(NetworkMonitor monitor)
     {
@@ -54,7 +55,8 @@ public sealed class MainViewModel : ObservableObject
     }
 
     // ---- bindable state -------------------------------------------------
-    public ObservableCollection<ProcessRow> Processes { get; } = new();
+    // Top level is groups (by process name); each group holds its PID rows.
+    public ObservableCollection<ProcessGroup> Groups { get; } = new();
 
     private string _upNow = "now: --";
     public string UpNow { get => _upNow; private set => SetField(ref _upNow, value); }
@@ -74,8 +76,8 @@ public sealed class MainViewModel : ObservableObject
     private string _status = "starting up…";
     public string Status { get => _status; private set => SetField(ref _status, value); }
 
-    private ProcessRow? _selected;
-    public ProcessRow? Selected
+    private IProcessNode? _selected;
+    public IProcessNode? Selected
     {
         get => _selected;
         set
@@ -88,6 +90,19 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// The exe path the firewall commands should act on, resolved from the
+    /// current selection. A group resolves to the exe of its first member;
+    /// a leaf row resolves to its own exe.
+    /// </summary>
+    private string? SelectedExe => _selected switch
+    {
+        ProcessRow r              => string.IsNullOrEmpty(r.Exe) ? null : r.Exe,
+        ProcessGroup g            => g.Children.Select(c => c.Exe)
+                                                .FirstOrDefault(e => !string.IsNullOrEmpty(e)),
+        _                         => null,
+    };
+
     public bool FirewallEnabled
     {
         get => _monitor.Settings.FirewallEnabled;
@@ -99,7 +114,7 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    private bool CanModifySelected => Selected is { } row && !string.IsNullOrEmpty(row.Exe);
+    private bool CanModifySelected => !string.IsNullOrEmpty(SelectedExe);
 
     // ---- commands -------------------------------------------------------
     public RelayCommand BlockSelectedCommand { get; }
@@ -109,14 +124,12 @@ public sealed class MainViewModel : ObservableObject
 
     private void BlockSelected()
     {
-        if (Selected is { Exe: { Length: > 0 } exe })
-            _monitor.SetBlocked(exe, true);
+        if (SelectedExe is { } exe) _monitor.SetBlocked(exe, true);
     }
 
     private void UnblockSelected()
     {
-        if (Selected is { Exe: { Length: > 0 } exe })
-            _monitor.SetBlocked(exe, false);
+        if (SelectedExe is { } exe) _monitor.SetBlocked(exe, false);
     }
 
     private void RemoveAllRules()
@@ -152,28 +165,99 @@ public sealed class MainViewModel : ObservableObject
         var fw = _monitor.Firewall is null ? "WFP: not available" : "WFP: ready";
         Status = $"{mode}    |    {fw}";
 
-        // Reconcile by PID. Rows for PIDs no longer present get removed;
-        // new PIDs become new rows; existing rows update in place.
-        var seenPids = new HashSet<int>();
+        ReconcileTree(procs, unit);
+    }
+
+    /// <summary>
+    /// Build / update the two-level tree: process-name groups at the top,
+    /// individual PIDs underneath. Everything is reconciled in place (groups
+    /// by name, children by PID) so expand/collapse state and selection
+    /// survive each tick — the same stability guarantee the old flat list
+    /// had, extended to the hierarchy.
+    /// </summary>
+    private void ReconcileTree(IReadOnlyList<ProcStat> procs, string unit)
+    {
+        // Bucket the snapshot by process name.
+        var byName = new Dictionary<string, List<ProcStat>>();
         foreach (var p in procs)
         {
-            seenPids.Add(p.Pid);
-            if (!_rowByPid.TryGetValue(p.Pid, out var row))
-            {
-                row = new ProcessRow(p.Pid);
-                _rowByPid[p.Pid] = row;
-                Processes.Add(row);
-            }
-            row.Refresh(p, unit);
+            var key = string.IsNullOrEmpty(p.Name) ? "(unknown)" : p.Name;
+            if (!byName.TryGetValue(key, out var list))
+                byName[key] = list = new List<ProcStat>();
+            list.Add(p);
         }
-        for (int i = Processes.Count - 1; i >= 0; i--)
+
+        // Update / add groups.
+        foreach (var (name, members) in byName)
         {
-            if (!seenPids.Contains(Processes[i].Pid))
+            if (!_groupByName.TryGetValue(name, out var group))
             {
-                _rowByPid.Remove(Processes[i].Pid);
-                Processes.RemoveAt(i);
+                group = new ProcessGroup(name);
+                _groupByName[name] = group;
+                Groups.Add(group);
+            }
+
+            // Reconcile this group's children by PID.
+            var seenPids = new HashSet<int>();
+            foreach (var m in members)
+            {
+                seenPids.Add(m.Pid);
+                if (!_rowByPid.TryGetValue(m.Pid, out var row))
+                {
+                    row = new ProcessRow(m.Pid);
+                    _rowByPid[m.Pid] = row;
+                    group.Children.Add(row);
+                }
+                else if (!ReferenceEquals(FindParent(row), group))
+                {
+                    // PID's process name changed (rare, e.g. exec) — move it.
+                    RemoveRowFromItsGroup(row);
+                    group.Children.Add(row);
+                }
+                row.Refresh(m, unit);
+                // Leaf label: bare "PID n" inside a multi-member group, full
+                // "name (PID n)" when the group has a single member.
+                row.Display = members.Count == 1 ? $"{name}  (PID {m.Pid})" : $"PID {m.Pid}";
+            }
+
+            // Drop children that vanished.
+            for (int i = group.Children.Count - 1; i >= 0; i--)
+            {
+                var child = group.Children[i];
+                if (!seenPids.Contains(child.Pid))
+                {
+                    _rowByPid.Remove(child.Pid);
+                    group.Children.RemoveAt(i);
+                }
+            }
+
+            group.RefreshAggregate(members, unit);
+        }
+
+        // Drop groups that vanished entirely.
+        for (int i = Groups.Count - 1; i >= 0; i--)
+        {
+            var g = Groups[i];
+            if (!byName.ContainsKey(g.Name))
+            {
+                foreach (var child in g.Children) _rowByPid.Remove(child.Pid);
+                _groupByName.Remove(g.Name);
+                Groups.RemoveAt(i);
             }
         }
+    }
+
+    private ProcessGroup? FindParent(ProcessRow row)
+    {
+        foreach (var g in Groups)
+            if (g.Children.Contains(row)) return g;
+        return null;
+    }
+
+    private void RemoveRowFromItsGroup(ProcessRow row)
+    {
+        var parent = FindParent(row);
+        parent?.Children.Remove(row);
     }
 
     public void Stop() => _timer.Stop();

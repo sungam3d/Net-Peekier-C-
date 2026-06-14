@@ -123,7 +123,7 @@ NetPeekier.sln
       4. Add an IP rule for notepad, verify in `netsh wfp show filters` it
          shows under our sublayer GUID.
 
-### Phase 4 — GUI ✅ FUNCTIONALLY COMPLETE (polish pending)
+### Phase 4 — GUI ✅ COMPLETE
 - [x] MVVM scaffold: `ObservableObject`, `RelayCommand`, `MainViewModel`
 - [x] MainWindow: dashboard (up/down/peak/session), live DataGrid bound to
       `Processes`, in-place row reconciliation by PID (no flicker / no
@@ -150,7 +150,12 @@ NetPeekier.sln
       CPU clock via registry, optional CPU/GPU/RAM temps + GPU load/clock
       via LibreHardwareMonitorLib.dll loaded by reflection — drop the dll
       next to the exe to light up temps, absent = "--")
-- [ ] Hierarchical app list (svchost expand UX — polish task)
+- [x] Hierarchical app list: TreeView grouping PIDs by process name
+      (the svchost.exe cluster collapses under one expandable parent with
+      summed up/down/total). Reconciled in place by name+PID so expand/
+      collapse and selection survive ticks. Group or leaf both selectable;
+      block/unblock and double-click-for-connections resolve a PID from
+      either. Matches the Python build's Treeview UX.
 
 ### Phase 5 — Polish + publish
 - [x] Version metadata embedded in NetPeekier.App.csproj (2.0.0)
@@ -198,6 +203,24 @@ machine with NuGet access — you'll want `TraceEvent` for Phase 5.
 ---
 
 ## Status log (newest first)
+
+- **2026-06-14 — Hierarchical app list + stats polish.**
+  - Main list is now a grouped tree (TreeView): processes cluster by name,
+    so the dozens of svchost.exe instances collapse under one expandable
+    parent showing summed up/down/total. New `ProcessGroup` VM +
+    `IProcessNode` interface so one set of columns binds to both group and
+    leaf rows. Reconciled in place by name (groups) and PID (children) —
+    expand/collapse and selection survive each 1Hz tick. Tabular look via
+    a fixed-width column header strip aligned to Grid-based item templates.
+    Selecting a group acts on its first member's exe; double-click on a
+    leaf (or single-member group) opens its connections; multi-member
+    groups expand/collapse on double-click instead.
+  - StatsWindow: RAM now shows "used / total GB (load%)" via
+    GlobalMemoryStatusEx (more intuitive than the bare committed-bytes
+    percentage), with the percentage preserved as a fallback. CPU load,
+    CPU clock, and RAM all work WITHOUT LibreHardwareMonitorLib.dll — only
+    temperatures and GPU details need the optional dll.
+  - 97/97 tests still pass (logic-only change to the App layer).
 
 - **2026-06-14 — SystemStats + StatsWindow (CPU/GPU/RAM dashboard).**
   - `SystemStats.cs` ported from sysstats.py. CPU load + RAM% via

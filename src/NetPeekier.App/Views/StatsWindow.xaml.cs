@@ -45,7 +45,7 @@ public partial class StatsWindow : Window
         GpuClock.Text = Mhz(s.GpuClock);
         GpuTemp.Text  = Temp(s.GpuTemp);
 
-        RamUsed.Text  = Pct(s.RamUsed);
+        RamUsed.Text  = RamText(s.RamUsed, s.RamUsedGb, s.RamTotalGb);
         RamClock.Text = Mhz(s.RamClock);
         RamTemp.Text  = Temp(s.RamTemp);
 
@@ -57,4 +57,18 @@ public partial class StatsWindow : Window
     private static string Pct(double? v)  => v is null ? "--" : v.Value.ToString("0", CultureInfo.InvariantCulture) + "%";
     private static string Mhz(double? v)  => v is null ? "--" : v.Value.ToString("0", CultureInfo.InvariantCulture) + " MHz";
     private static string Temp(double? v) => v is null ? "--" : v.Value.ToString("0", CultureInfo.InvariantCulture) + " °C";
+
+    /// <summary>
+    /// "12.3 / 32.0 GB (38%)" when GB figures are available, else falls back
+    /// to a bare percentage, else "--".
+    /// </summary>
+    private static string RamText(double? pct, double? usedGb, double? totalGb)
+    {
+        if (usedGb is { } u && totalGb is { } t)
+        {
+            var pctStr = pct is { } p ? $" ({p:0}%)" : "";
+            return string.Format(CultureInfo.InvariantCulture, "{0:0.0} / {1:0.0} GB{2}", u, t, pctStr);
+        }
+        return Pct(pct);
+    }
 }

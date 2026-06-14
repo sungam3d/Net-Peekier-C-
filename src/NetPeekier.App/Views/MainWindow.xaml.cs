@@ -56,28 +56,57 @@ public partial class MainWindow : Window
         win.ShowDialog();
     }
 
+    private void OnTreeSelectionChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+    {
+        // The TreeView's SelectedItem isn't two-way bindable, so we push the
+        // selection into the VM here. It accepts either node kind.
+        _vm.Selected = e.NewValue as IProcessNode;
+    }
+
     private void OnOpenConnections(object sender, RoutedEventArgs e)
     {
-        if (_vm.Selected is null)
+        var (pid, name) = ResolveSelectedPid();
+        if (pid is null)
         {
             MessageBox.Show("Select a process first.", "Net-Peekier",
                 MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
-        var win = new ConnectionsWindow(_vm.Selected.Pid, _vm.Selected.Name) { Owner = this };
+        var win = new ConnectionsWindow(pid.Value, name) { Owner = this };
         win.Show();
     }
 
     private void OnRowDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        // Open the connections detail window for the double-clicked row,
-        // ignoring header / scroll-bar clicks (where there's no row under
-        // the cursor).
-        if (sender is DataGrid grid
-            && grid.SelectedItem is ProcessRow row)
+        // Double-click on a leaf opens its connections. Double-click on a
+        // group with one member opens that member; on a multi-member group
+        // we let the default expand/collapse happen instead.
+        var (pid, name) = ResolveSelectedPid();
+        if (pid is not null)
         {
-            var win = new ConnectionsWindow(row.Pid, row.Name) { Owner = this };
+            // Don't hijack the expander toggle on multi-child groups.
+            if (_vm.Selected is ProcessGroup g && g.Children.Count > 1) return;
+            var win = new ConnectionsWindow(pid.Value, name) { Owner = this };
             win.Show();
+        }
+    }
+
+    /// <summary>
+    /// Resolve the (pid, displayName) the detail window should open for the
+    /// current selection. A leaf resolves to itself; a group resolves to its
+    /// first child PID.
+    /// </summary>
+    private (int? Pid, string Name) ResolveSelectedPid()
+    {
+        switch (_vm.Selected)
+        {
+            case ProcessRow row:
+                return (row.Pid, row.Name);
+            case ProcessGroup grp when grp.Children.Count > 0:
+                var first = grp.Children[0];
+                return (first.Pid, first.Name);
+            default:
+                return (null, "");
         }
     }
 }

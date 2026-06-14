@@ -6,12 +6,17 @@ using NetPeekier.Core;
 
 namespace NetPeekier.App.ViewModels;
 
-public sealed class ProcessRow : ObservableObject
+public sealed class ProcessRow : ObservableObject, IProcessNode
 {
     public int Pid { get; }                 // immutable; row identity
 
     private string _name = "";
     public string Name { get => _name; private set => SetField(ref _name, value); }
+
+    // IProcessNode.Display: leaf rows show "PID 1234" (or the full name when
+    // the group has a single member — set by the VM during reconciliation).
+    private string _display = "";
+    public string Display { get => _display; set => SetField(ref _display, value); }
 
     private string _exe = "";
     public string Exe { get => _exe; private set => SetField(ref _exe, value); }

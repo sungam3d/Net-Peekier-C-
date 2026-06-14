@@ -18,6 +18,7 @@
 
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using NetPeekier.Core;
 
@@ -32,6 +33,8 @@ public sealed class SystemStatsSnapshot
     public double? GpuClock  { get; init; }   // MHz
     public double? GpuTemp   { get; init; }   // °C
     public double? RamUsed   { get; init; }   // %
+    public double? RamUsedGb { get; init; }   // GiB in use
+    public double? RamTotalGb{ get; init; }   // GiB installed
     public double? RamClock  { get; init; }   // MHz
     public double? RamTemp   { get; init; }   // °C
 }
@@ -156,6 +159,23 @@ public sealed class SystemMonitor : IDisposable
         try { if (_ramCounter is not null) ramUsed = _ramCounter.NextValue(); } catch { /* ignore */ }
         try { cpuClock = CpuClockMhz(); } catch { /* ignore */ }
 
+        // Physical RAM used/total in GiB via GlobalMemoryStatusEx. This is a
+        // more intuitive figure than the "% committed bytes" counter (which
+        // includes the page file), and gives us the dwMemoryLoad percent too.
+        double? ramUsedGb = null, ramTotalGb = null, ramLoadPct = null;
+        try
+        {
+            var mem = new MEMORYSTATUSEX { dwLength = (uint)Marshal.SizeOf<MEMORYSTATUSEX>() };
+            if (GlobalMemoryStatusEx(ref mem))
+            {
+                const double GiB = 1024.0 * 1024 * 1024;
+                ramTotalGb = mem.ullTotalPhys / GiB;
+                ramUsedGb  = (mem.ullTotalPhys - mem.ullAvailPhys) / GiB;
+                ramLoadPct = mem.dwMemoryLoad;
+            }
+        }
+        catch { /* ignore */ }
+
         // Optional hardware sensors (temps, GPU details).
         LibreHwmReading hwm = default;
         if (_hwm is not null)
@@ -165,17 +185,39 @@ public sealed class SystemMonitor : IDisposable
 
         return new SystemStatsSnapshot
         {
-            CpuLoad  = cpuLoad,
-            CpuClock = cpuClock,
-            RamUsed  = ramUsed,
-            CpuTemp  = hwm.CpuTemp,
-            GpuTemp  = hwm.GpuTemp,
-            GpuLoad  = hwm.GpuLoad,
-            GpuClock = hwm.GpuClock,
-            RamTemp  = hwm.RamTemp,
-            RamClock = hwm.RamClock,
+            CpuLoad   = cpuLoad,
+            CpuClock  = cpuClock,
+            // Prefer the physical-memory load% from GlobalMemoryStatusEx;
+            // fall back to the committed-bytes counter if that failed.
+            RamUsed   = ramLoadPct ?? ramUsed,
+            RamUsedGb = ramUsedGb,
+            RamTotalGb= ramTotalGb,
+            CpuTemp   = hwm.CpuTemp,
+            GpuTemp   = hwm.GpuTemp,
+            GpuLoad   = hwm.GpuLoad,
+            GpuClock  = hwm.GpuClock,
+            RamTemp   = hwm.RamTemp,
+            RamClock  = hwm.RamClock,
         };
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MEMORYSTATUSEX
+    {
+        public uint   dwLength;
+        public uint   dwMemoryLoad;
+        public ulong  ullTotalPhys;
+        public ulong  ullAvailPhys;
+        public ulong  ullTotalPageFile;
+        public ulong  ullAvailPageFile;
+        public ulong  ullTotalVirtual;
+        public ulong  ullAvailVirtual;
+        public ulong  ullAvailExtendedVirtual;
+    }
+
+    [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
 
     /// <summary>
     /// Current CPU max clock in MHz, read from the registry (the same value
