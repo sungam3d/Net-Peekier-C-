@@ -170,9 +170,15 @@ public sealed class PacketCapture : IDisposable
                 if (dev is not SharpPcap.LibPcap.LibPcapLiveDevice live) continue;
 
                 live.OnPacketArrival += OnPacketArrival;
-                // Open in promiscuous-off mode with a short read timeout. We
-                // want our own machine's traffic, not the whole segment.
-                live.Open(deviceMode: SharpPcap.DeviceModes.None, read_timeout: 250);
+                // Open via DeviceConfiguration (the canonical SharpPcap 6.x
+                // overload). Mode None = not promiscuous: we want our own
+                // machine's traffic, not the whole segment. Short read
+                // timeout keeps the capture loop responsive.
+                live.Open(new SharpPcap.DeviceConfiguration
+                {
+                    Mode = SharpPcap.DeviceModes.None,
+                    ReadTimeout = 250,
+                });
                 live.StartCapture();
                 lock (_devices) _devices.Add(live);
                 opened++;
