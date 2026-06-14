@@ -38,6 +38,13 @@
          (and the native helper) next to the exe automatically. No manual
          drop-in needed. Reading the sensors requires running as admin. -->
     <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
+    <!-- Packet capture + payload (hex) view. SharpPcap/PacketDotNet are
+         managed and always present; they call the native Npcap driver
+         (wpcap.dll) which the USER installs separately (license can't be
+         bundled). PacketCapture.cs degrades gracefully when Npcap is
+         absent. -->
+    <PackageReference Include="SharpPcap" Version="6.3.0" />
+    <PackageReference Include="PacketDotNet" Version="1.4.7" />
   </ItemGroup>
 
 </Project>

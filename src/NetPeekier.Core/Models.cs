@@ -29,6 +29,39 @@ public sealed record ConnectionEvent
     public string DirectionArrow => Outbound ? "-->" : "<--";
 }
 
+/// <summary>
+/// A captured packet with its payload bytes, for the hex/ASCII view.
+/// Separate from ConnectionEvent so the lightweight event stream isn't
+/// burdened with byte arrays when no one's looking at payloads.
+/// </summary>
+public sealed class CapturedPacket
+{
+    public required double Timestamp  { get; init; }       // epoch seconds
+    public required bool   Outbound   { get; init; }
+    public required string Protocol   { get; init; }       // TCP / UDP / ICMP / ...
+    public required string LocalIp    { get; init; }
+    public required int    LocalPort  { get; init; }
+    public required string RemoteIp   { get; init; }
+    public required int    RemotePort { get; init; }
+    public required int    Length     { get; init; }       // full frame length on the wire
+    public int?            Pid        { get; set; }
+    public string          ProcessName { get; set; } = "";
+
+    /// <summary>
+    /// Captured payload bytes (may be shorter than Length if a capture
+    /// snaplen truncated the frame; we capture full frames by default).
+    /// This is the transport payload — past the IP + TCP/UDP headers — so
+    /// the hex view shows application data, matching the Python tool.
+    /// </summary>
+    public required byte[] Payload { get; init; }
+
+    public string DirectionArrow => Outbound ? "-->" : "<--";
+
+    /// <summary>"TCP  192.168.1.5:54321 --> 93.184.216.34:443" summary line.</summary>
+    public string Summary =>
+        $"{Protocol,-4} {LocalIp}:{LocalPort} {DirectionArrow} {RemoteIp}:{RemotePort}";
+}
+
 /// <summary>A live socket belonging to a process (Detail Information rows).</summary>
 public sealed class Connection
 {

@@ -50,6 +50,12 @@ public partial class MainWindow : Window
         win.Show();
     }
 
+    private void OnOpenPackets(object sender, RoutedEventArgs e)
+    {
+        var win = new PacketsWindow { Owner = this };
+        win.Show();
+    }
+
     private void OnAbout(object sender, RoutedEventArgs e)
     {
         var win = new AboutWindow { Owner = this };

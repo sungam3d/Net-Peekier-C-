@@ -28,6 +28,17 @@ Used for ETW per-process byte counting.
 - Project: https://github.com/microsoft/perfview
 - License: MIT
 
+## SharpPcap and PacketDotNet
+
+Used for packet capture and parsing in the Packets window.
+
+- Projects: https://github.com/dotpcap/sharppcap , https://github.com/dotpcap/packetnet
+- License: MIT (SharpPcap) / portions under the libpcap BSD-style license
+
+These call the Npcap driver, which the user installs separately. Npcap is
+distributed under its own license (https://npcap.com/), not bundled with
+Net-Peekier.
+
 ## Other Microsoft packages
 
 System.Diagnostics.PerformanceCounter and Microsoft.Win32.Registry are

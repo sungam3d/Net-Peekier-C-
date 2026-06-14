@@ -31,6 +31,7 @@ public partial class App : Application
 
     public NetworkMonitor NetworkMonitor { get; }
     public SystemMonitor SystemMonitor { get; } = new(intervalSeconds: 2.0);
+    public PacketCapture? PacketCapture { get; private set; }
 
     // Per-exe prompt suppression: once we've shown the dialog for an exe,
     // don't show it again until the monitor reports the same exe again
@@ -44,6 +45,10 @@ public partial class App : Application
             Diag.Log("App instance ctor: about to construct NetworkMonitor");
             NetworkMonitor = new NetworkMonitor(TimeSpan.FromSeconds(1));
             Diag.Log("App instance ctor: NetworkMonitor constructed");
+            // PacketCapture shares the monitor's ProcessMap for PID lookup.
+            // It is NOT started here — capture has overhead, so we start it
+            // lazily the first time the user opens the Packets window.
+            PacketCapture = new PacketCapture(NetworkMonitor.ProcessMap);
         }
         catch (Exception ex)
         {
@@ -126,6 +131,7 @@ public partial class App : Application
         try { NetworkMonitor?.Stop();    } catch (Exception ex) { Diag.LogException("OnExit / Stop", ex); }
         try { NetworkMonitor?.Dispose(); } catch (Exception ex) { Diag.LogException("OnExit / Dispose", ex); }
         try { SystemMonitor?.Stop();     } catch (Exception ex) { Diag.LogException("OnExit / SysStop", ex); }
+        try { PacketCapture?.Dispose();  } catch (Exception ex) { Diag.LogException("OnExit / PcapStop", ex); }
         base.OnExit(e);
         Diag.Log("OnExit completed");
     }

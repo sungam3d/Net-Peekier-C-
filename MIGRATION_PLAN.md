@@ -30,20 +30,26 @@ appended.
 | Per-IP allow / block / whitelist         | netsh + IP-set arithmetic | **WFP filter**, same arithmetic ✅ |
 | Lockdown / default-deny                  | netsh sweep               | **WFP** sweep, identical UX ✅ |
 | Tags, group limits, etc.                 | settings + WinDivert      | settings + WFP                 |
-| Live packet view + hex dump              | WinDivert                 | **DROPPED** *(see note)*       |
+| Live packet view + hex dump              | WinDivert                 | **Npcap** (optional, read-only)|
 | Per-process speed limit (throttle)       | WinDivert token bucket    | **DROPPED** *(see note)*       |
 | System stats (CPU/GPU/RAM/temps)         | psutil + HardwareMonitor  | PerfCounter + LibreHWM dll     |
 | History log                              | plain file                | plain file ✅                  |
 
-**Dropped features — why:** packet-payload capture and inline byte-rate
-throttling both require sitting in the packet path, which means a kernel
-driver. That was the whole reason we pivoted away from WinDivert. So:
+**Feature notes:**
 
-1. **Hex/packet view is gone.** Replaced with a "Connections" panel driven
-   by the ETW connection table. You see: timestamp, PID, direction,
-   protocol, local/remote endpoints — no payload.
-2. **Throttling is replaced with finer-grained blocking.** Use the per-IP
-   rule UI for "Chrome can talk to *these* IPs/ports but nothing else".
+1. **Hex/packet view is BACK, via Npcap.** Originally dropped (it needs a
+   kernel-level capture component), it's now restored using Npcap — the same
+   signed, trusted driver Wireshark uses — instead of WinDivert. Npcap is an
+   optional user-installed dependency: if absent, the Packets window shows an
+   install prompt and the rest of the app is unaffected. Capture is
+   read-only and completely separate from the WFP blocking path, so it can't
+   cause the kind of packet-path instability the old WinDivert build had.
+   PID attribution is by local-port correlation against the connection table
+   (same approach as the Python build).
+2. **Throttling is still replaced with finer-grained blocking.** Inline
+   byte-rate throttling genuinely needs to sit *in* the packet path (not just
+   observe it), which Npcap can't do — that remains a WFP per-IP-rule story:
+   "Chrome can talk to *these* IPs/ports but nothing else".
 
 ---
 
@@ -203,6 +209,28 @@ machine with NuGet access — you'll want `TraceEvent` for Phase 5.
 ---
 
 ## Status log (newest first)
+
+- **2026-06-14 — Packet capture + hex view restored (via Npcap).**
+  - The payload/hex packet view — originally dropped with WinDivert — is
+    back, built on Npcap (SharpPcap 6.3 + PacketDotNet 1.4). Read-only
+    capture that sits alongside WFP/ETW without touching them, so none of
+    the old WinDivert packet-path instability applies.
+  - `PacketCapture` (Native): opens all live adapters, parses each frame to
+    its transport payload, correlates to a PID by local-port lookup against
+    ProcessMap's connection table, and pushes into a bounded ring buffer
+    (5000). Supports pause, clear, capacity, and per-PID filter. Detects
+    Npcap by probing for wpcap.dll and degrades gracefully if absent
+    (Available=false).
+  - `PacketsWindow` (App): live grid (time/proc/pid/proto/dir/local/remote/
+    len) over a Wireshark-style offset/hex/ASCII payload dump, with a
+    process filter dropdown, pause/resume, and clear. If Npcap is missing,
+    shows a "Download Npcap" prompt with a re-check button instead. Capture
+    starts lazily on first open (it has overhead). New CapturedPacket model
+    in Core carries the payload bytes; hex formatter verified against a real
+    HTTP request.
+  - Npcap is optional + user-installed (license can't be bundled). Added to
+    README + THIRD-PARTY-LICENSES.
+  - 97/97 tests still pass.
 
 - **2026-06-14 — LibreHardwareMonitor bundled via NuGet (no more drop-in dll).**
   - The reflection-loaded "drop LibreHardwareMonitorLib.dll next to the exe"

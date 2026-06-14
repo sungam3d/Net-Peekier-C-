@@ -65,3 +65,20 @@ needs administrator privileges. Run elevated and the Up/Down columns populate
 and the status bar reads `backend: ETW Kernel-Network`. Without elevation the
 app still runs, showing the connection table and system-wide totals, with the
 status bar noting per-process speeds are unavailable.
+
+## Optional: packet capture & payload view (Npcap)
+
+The Packets window (View → Packets) shows live traffic with a Wireshark-style
+hex/ASCII payload dump, per-process filtering, and pause/clear. This uses
+Npcap, the same capture driver Wireshark ships.
+
+Npcap isn't bundled (its license requires you install it yourself). If it's
+missing, the Packets window shows a one-click link to the installer; the rest
+of the app is unaffected. During the Npcap install, leave "WinPcap
+API-compatible mode" checked, then restart Net-Peekier as administrator.
+
+Capture is read-only — it never blocks traffic. Blocking is still handled by
+WFP, entirely separately. The packet-to-process mapping correlates each
+packet's local port against the live connection table (the same approach the
+original Python build used); it's reliable for established connections and may
+occasionally miss a very short-lived socket.
