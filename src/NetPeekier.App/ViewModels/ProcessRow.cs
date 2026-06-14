@@ -27,8 +27,11 @@ public sealed class ProcessRow : ObservableObject, IProcessNode
     private string _down = "0 B/s";
     public string Down { get => _down; private set => SetField(ref _down, value); }
 
-    private string _total = "0 B";
-    public string Total { get => _total; private set => SetField(ref _total, value); }
+    private string _totalUp = "-";
+    public string TotalUp { get => _totalUp; private set => SetField(ref _totalUp, value); }
+
+    private string _totalDown = "-";
+    public string TotalDown { get => _totalDown; private set => SetField(ref _totalDown, value); }
 
     private string _listening = "";
     public string Listening { get => _listening; private set => SetField(ref _listening, value); }
@@ -41,6 +44,9 @@ public sealed class ProcessRow : ObservableObject, IProcessNode
 
     private bool _usesWan;
     public bool UsesWan { get => _usesWan; private set => SetField(ref _usesWan, value); }
+
+    private string _rowColor = "#555";
+    public string RowColor { get => _rowColor; private set => SetField(ref _rowColor, value); }
 
     private int _connectionCount;
     public int ConnectionCount { get => _connectionCount; private set => SetField(ref _connectionCount, value); }
@@ -55,11 +61,14 @@ public sealed class ProcessRow : ObservableObject, IProcessNode
         Exe             = p.Exe;
         Up              = Formatting.HumanSpeed(p.UpBps,   speedUnit);
         Down            = Formatting.HumanSpeed(p.DownBps, speedUnit);
-        Total           = Formatting.HumanBytes(p.UpTotal + p.DownTotal);
+        TotalUp         = p.UpTotal   > 0 ? Formatting.HumanBytes(p.UpTotal)   : "-";
+        TotalDown       = p.DownTotal > 0 ? Formatting.HumanBytes(p.DownTotal) : "-";
         Listening       = Formatting.PortsStr(p.ListeningPorts);
         Tag             = p.Tag;
         Blocked         = p.Blocked;
         UsesWan         = p.UsesWan;
         ConnectionCount = p.Connections.Count;
+        RowColor        = p.Blocked ? "#b5302a"
+                          : ((p.UpBps + p.DownBps) > 0 ? "#333" : "#888");
     }
 }

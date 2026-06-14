@@ -15,8 +15,15 @@
         </StackPanel>
 
         <StackPanel>
-            <TextBlock FontSize="22" FontWeight="Bold" Text="Net-Peekier" />
-            <TextBlock x:Name="VersionText" Foreground="#666" Margin="0,2,0,12" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <Image Source="pack://application:,,,/Assets/icon.png"
+                       Width="56" Height="56" Margin="0,0,12,0"
+                       VerticalAlignment="Top" />
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock FontSize="22" FontWeight="Bold" Text="Net-Peekier" />
+                    <TextBlock x:Name="VersionText" Foreground="#666" Margin="0,2,0,0" />
+                </StackPanel>
+            </StackPanel>
 
             <TextBlock TextWrapping="Wrap">
                 Per-process network monitor and firewall for Windows.

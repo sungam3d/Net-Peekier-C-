@@ -23,10 +23,11 @@ public sealed class MainViewModel : ObservableObject
     private readonly Dictionary<int, ProcessRow> _rowByPid = new();
     private readonly Dictionary<string, ProcessGroup> _groupByName = new();
 
-    public MainViewModel(NetworkMonitor monitor)
+    public MainViewModel(NetworkMonitor monitor, SystemMonitor? sysmon = null)
     {
         Diag.Log("MainViewModel.ctor: begin");
         _monitor = monitor;
+        _sysmon = sysmon;
 
         _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = RefreshInterval };
         _timer.Tick += (_, _) => SafeRefresh();
@@ -58,23 +59,91 @@ public sealed class MainViewModel : ObservableObject
     // Top level is groups (by process name); each group holds its PID rows.
     public ObservableCollection<ProcessGroup> Groups { get; } = new();
 
-    private string _upNow = "now: --";
+    // The app owns a SystemMonitor for the dashboard's SYSTEM column.
+    private readonly SystemMonitor? _sysmon;
+
+    // Dashboard: upload / download (now / peak / total). These are the raw
+    // formatted values (no "now:" prefix) so they sit under the NOW/PEAK/
+    // TOTAL labels exactly like the Python build.
+    private string _upNow = "0/s";
     public string UpNow { get => _upNow; private set => SetField(ref _upNow, value); }
-
-    private string _upPeak = "peak: --";
+    private string _upPeak = "0/s";
     public string UpPeak { get => _upPeak; private set => SetField(ref _upPeak, value); }
+    private string _upTotal = "0 B";
+    public string UpTotal { get => _upTotal; private set => SetField(ref _upTotal, value); }
 
-    private string _downNow = "now: --";
+    private string _downNow = "0/s";
     public string DownNow { get => _downNow; private set => SetField(ref _downNow, value); }
-
-    private string _downPeak = "peak: --";
+    private string _downPeak = "0/s";
     public string DownPeak { get => _downPeak; private set => SetField(ref _downPeak, value); }
+    private string _downTotal = "0 B";
+    public string DownTotal { get => _downTotal; private set => SetField(ref _downTotal, value); }
 
-    private string _sessionTotal = "session: --";
-    public string SessionTotal { get => _sessionTotal; private set => SetField(ref _sessionTotal, value); }
+    // Dashboard: SYSTEM column. RAM clock+temp intentionally omitted.
+    private string _cpuLoad = "--";
+    public string CpuLoad { get => _cpuLoad; private set => SetField(ref _cpuLoad, value); }
+    private string _cpuClock = "--";
+    public string CpuClock { get => _cpuClock; private set => SetField(ref _cpuClock, value); }
+    private string _cpuTemp = "--";
+    public string CpuTemp { get => _cpuTemp; private set => SetField(ref _cpuTemp, value); }
+    private string _gpuLoad = "--";
+    public string GpuLoad { get => _gpuLoad; private set => SetField(ref _gpuLoad, value); }
+    private string _gpuClock = "--";
+    public string GpuClock { get => _gpuClock; private set => SetField(ref _gpuClock, value); }
+    private string _gpuTemp = "--";
+    public string GpuTemp { get => _gpuTemp; private set => SetField(ref _gpuTemp, value); }
+    private string _ramLoad = "--";
+    public string RamLoad { get => _ramLoad; private set => SetField(ref _ramLoad, value); }
 
     private string _status = "starting up…";
     public string Status { get => _status; private set => SetField(ref _status, value); }
+
+    // ---- LAN/WAN view filters (persist to settings) ---------------------
+    public bool ShowLan
+    {
+        get => _monitor.Settings.ShowLan;
+        set
+        {
+            if (_monitor.Settings.ShowLan == value) return;
+            _monitor.Settings.ShowLan = value;
+            _monitor.Settings.Save();
+            OnPropertyChanged();
+            SafeRefresh();
+        }
+    }
+
+    public bool ShowWan
+    {
+        get => _monitor.Settings.ShowWan;
+        set
+        {
+            if (_monitor.Settings.ShowWan == value) return;
+            _monitor.Settings.ShowWan = value;
+            _monitor.Settings.Save();
+            OnPropertyChanged();
+            SafeRefresh();
+        }
+    }
+
+    // ---- Lockdown mode --------------------------------------------------
+    public bool LockdownMode
+    {
+        get => _monitor.Settings.LockdownMode;
+        set
+        {
+            if (_monitor.Settings.LockdownMode == value) return;
+            // Lockdown needs the firewall on to enforce anything.
+            if (value && !_monitor.Settings.FirewallEnabled)
+            {
+                _monitor.SetFirewallEnabled(true);
+                OnPropertyChanged(nameof(FirewallEnabled));
+                OnPropertyChanged(nameof(FirewallLightColor));
+            }
+            _monitor.SetLockdown(value);
+            OnPropertyChanged();
+            SafeRefresh();
+        }
+    }
 
     private IProcessNode? _selected;
     public IProcessNode? Selected
@@ -111,8 +180,13 @@ public sealed class MainViewModel : ObservableObject
             if (_monitor.Settings.FirewallEnabled == value) return;
             _monitor.SetFirewallEnabled(value);
             OnPropertyChanged();
+            OnPropertyChanged(nameof(FirewallLightColor));
+            SafeRefresh();
         }
     }
+
+    /// <summary>Green ● when the firewall is on, red when off (Python parity).</summary>
+    public string FirewallLightColor => _monitor.Settings.FirewallEnabled ? "#1e9e3e" : "#cc2b2b";
 
     private bool CanModifySelected => !string.IsNullOrEmpty(SelectedExe);
 
@@ -147,25 +221,164 @@ public sealed class MainViewModel : ObservableObject
 
     private void ToggleFirewall() => FirewallEnabled = !FirewallEnabled;
 
+    // ---- context-menu actions ------------------------------------------
+
+    /// <summary>End a process by PID (terminate, then kill if it lingers).</summary>
+    public void EndProcess(int pid)
+    {
+        try
+        {
+            using var p = System.Diagnostics.Process.GetProcessById(pid);
+            p.Kill();   // .NET's Kill maps to TerminateProcess
+        }
+        catch (ArgumentException) { /* already gone */ }
+        catch (Exception ex)
+        {
+            Diag.LogException("MainViewModel.EndProcess", ex);
+            MessageBox.Show(
+                "Could not end the process.\nTry running Net-Peekier as Administrator.",
+                "End Process", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        SafeRefresh();
+    }
+
+    /// <summary>Open Explorer with the selected process's exe highlighted.</summary>
+    public void OpenSelectedPath()
+    {
+        var exe = SelectedExe;
+        if (string.IsNullOrEmpty(exe) || !System.IO.File.Exists(exe))
+        {
+            MessageBox.Show(
+                "No executable path is available for this process.\nTry running as Administrator.",
+                "Open Program Path", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"/select,\"{exe}\"",
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex) { Diag.LogException("MainViewModel.OpenSelectedPath", ex); }
+    }
+
+    /// <summary>Prompt for a tag and apply it to the selected exe.</summary>
+    public void SetTagOnSelected(Window owner)
+    {
+        var exe = SelectedExe;
+        if (string.IsNullOrEmpty(exe))
+        {
+            MessageBox.Show(
+                "No executable path available for this process.\nRun as Administrator to resolve it.",
+                "Set tag", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        var current = _monitor.Settings.ExeTags.TryGetValue(exe, out var t) ? t : "";
+        var ans = Views.TagPromptDialog.Ask(owner, current);
+        if (ans is null) return;   // cancelled
+
+        ans = ans.Trim();
+        if (ans.Length == 0) _monitor.Settings.ExeTags.Remove(exe);
+        else                 _monitor.Settings.ExeTags[exe] = ans;
+        _monitor.Settings.Save();
+        SafeRefresh();
+    }
+
+    public void RemoveTagFromSelected()
+    {
+        var exe = SelectedExe;
+        if (string.IsNullOrEmpty(exe)) return;
+        if (_monitor.Settings.ExeTags.Remove(exe))
+        {
+            _monitor.Settings.Save();
+            SafeRefresh();
+        }
+    }
+
+    /// <summary>Block / unblock the selected exe via the firewall.</summary>
+    public void BlockSelectedExe(bool block)
+    {
+        var exe = SelectedExe;
+        if (string.IsNullOrEmpty(exe))
+        {
+            MessageBox.Show(
+                "No executable path available for this process.\nRun as Administrator to resolve it.",
+                "Net-Peekier", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        _monitor.SetBlocked(exe, block);
+        SafeRefresh();
+    }
+
+    /// <summary>Add / remove the selected exe from the Lockdown allow-list.</summary>
+    public void AllowSelected(bool allow)
+    {
+        var exe = SelectedExe;
+        if (string.IsNullOrEmpty(exe)) return;
+        if (allow) _monitor.SetBlocked(exe, false);   // allow & block are exclusive
+        _monitor.SetAllowed(exe, allow);
+        SafeRefresh();
+    }
+
     // ---- refresh loop ---------------------------------------------------
     private void Refresh()
     {
         var (procs, totals) = _monitor.Snapshot();
         var unit = _monitor.Settings.SpeedUnit;
 
-        UpNow   = $"now: {Formatting.HumanSpeed(totals.UpNow, unit)}";
-        UpPeak  = $"peak: {Formatting.HumanSpeed(totals.UpPeak, unit)}";
-        DownNow = $"now: {Formatting.HumanSpeed(totals.DownNow, unit)}";
-        DownPeak= $"peak: {Formatting.HumanSpeed(totals.DownPeak, unit)}";
-        SessionTotal = $"session: ↑ {Formatting.HumanBytes(totals.UpTotal)}    ↓ {Formatting.HumanBytes(totals.DownTotal)}";
+        // Dashboard upload / download (bare values; NOW/PEAK/TOTAL labels are
+        // in the XAML, matching the Python build).
+        UpNow     = Formatting.HumanSpeed(totals.UpNow, unit);
+        UpPeak    = Formatting.HumanSpeed(totals.UpPeak, unit);
+        UpTotal   = Formatting.HumanBytes(totals.UpTotal);
+        DownNow   = Formatting.HumanSpeed(totals.DownNow, unit);
+        DownPeak  = Formatting.HumanSpeed(totals.DownPeak, unit);
+        DownTotal = Formatting.HumanBytes(totals.DownTotal);
 
-        var mode = _monitor.HasPerProcessSpeed
-            ? $"backend: {_monitor.BackendName}"
-            : "backend: connection table only — per-process speeds unavailable";
-        var fw = _monitor.Firewall is null ? "WFP: not available" : "WFP: ready";
-        Status = $"{mode}    |    {fw}";
+        UpdateSystemStats();
+
+        var admin = _monitor.Firewall is not null;
+        var backend = _monitor.HasPerProcessSpeed
+            ? $"{_monitor.BackendName}: live per-process speeds"
+            : "connection table only — per-process speeds need elevation";
+        var extra = admin ? "" : "   |   NOT elevated: run as Administrator for full visibility";
+        Status = $"{backend}{extra}";
 
         ReconcileTree(procs, unit);
+    }
+
+    /// <summary>
+    /// Pull the latest CPU/GPU/RAM figures from the SystemMonitor. RAM shows
+    /// load only (clock + temp deliberately omitted per the desired layout).
+    /// Formatting mirrors the Python build: percent/°C suffixes, MHz→GHz.
+    /// </summary>
+    private void UpdateSystemStats()
+    {
+        if (_sysmon is null) return;
+        SystemStatsSnapshot s;
+        try { s = _sysmon.Snapshot(); }
+        catch { return; }
+
+        CpuLoad  = Pct(s.CpuLoad);
+        CpuClock = Clock(s.CpuClock);
+        CpuTemp  = Temp(s.CpuTemp);
+        GpuLoad  = Pct(s.GpuLoad);
+        GpuClock = Clock(s.GpuClock);
+        GpuTemp  = Temp(s.GpuTemp);
+        RamLoad  = Pct(s.RamUsed);
+    }
+
+    private static string Pct(double? v)  => v is null ? "--" : v.Value.ToString("0") + "%";
+    private static string Temp(double? v) => v is null ? "--" : v.Value.ToString("0") + "\u00b0";
+    private static string Clock(double? mhz)
+    {
+        if (mhz is null) return "--";
+        return mhz.Value >= 1000
+            ? (mhz.Value / 1000.0).ToString("0.0") + "GHz"
+            : mhz.Value.ToString("0") + "MHz";
     }
 
     /// <summary>
@@ -177,9 +390,16 @@ public sealed class MainViewModel : ObservableObject
     /// </summary>
     private void ReconcileTree(IReadOnlyList<ProcStat> procs, string unit)
     {
+        // LAN/WAN view filter, matching the Python build: a WAN process has an
+        // internet remote; everything else (local-only or no remote) is LAN.
+        bool showLan = _monitor.Settings.ShowLan;
+        bool showWan = _monitor.Settings.ShowWan;
+        var filtered = procs.Where(p =>
+            (p.UsesWan && showWan) || (!p.UsesWan && showLan)).ToList();
+
         // Bucket the snapshot by process name.
         var byName = new Dictionary<string, List<ProcStat>>();
-        foreach (var p in procs)
+        foreach (var p in filtered)
         {
             var key = string.IsNullOrEmpty(p.Name) ? "(unknown)" : p.Name;
             if (!byName.TryGetValue(key, out var list))

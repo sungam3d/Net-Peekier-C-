@@ -5,198 +5,344 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:NetPeekier.App.ViewModels"
         mc:Ignorable="d"
-        Title="Net-Peekier — per-process network monitor"
-        Width="980" Height="620" MinWidth="780" MinHeight="460"
+        Title="Net-Peekier  -  per-process network monitor"
+        Width="880" Height="560" MinWidth="700" MinHeight="420"
+        Icon="pack://application:,,,/Assets/icon.png"
+        Background="#d6dce4"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel, IsDesignTimeCreatable=False}">
 
     <Window.Resources>
-        <!-- A discreet visual treatment for blocked / WAN cells. -->
-        <Style x:Key="DashLabel" TargetType="TextBlock">
+        <!-- Dashboard typography, ported from the Python build's ttk styles. -->
+        <Style x:Key="DashCaption" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#5a93ad" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
             <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Foreground" Value="#444" />
         </Style>
-        <Style x:Key="DashValue" TargetType="TextBlock">
+        <Style x:Key="DashTinyLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#3d6577" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="Margin" Value="0,0,5,0" />
+        </Style>
+        <Style x:Key="DashNow" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="DashSmall" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <!-- System column cells -->
+        <Style x:Key="SysHeader" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#3d6577" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+        </Style>
+        <Style x:Key="SysRowLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#5a93ad" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,4,0" />
+        </Style>
+        <Style x:Key="SysVal" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="8,0,0,0" />
         </Style>
     </Window.Resources>
 
     <DockPanel LastChildFill="True">
 
-        <!-- Menu -->
+        <!-- Menu bar: File / Statistics / Settings / Help (matches Python) -->
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem Header="_Settings…" Click="OnOpenSettings" />
-                <Separator />
                 <MenuItem Header="E_xit" Click="OnExit" />
             </MenuItem>
-            <MenuItem Header="_Firewall">
-                <MenuItem Header="_Manage firewall…"     Click="OnOpenFirewall" />
-                <Separator />
-                <MenuItem Header="_Block selected app"   Command="{Binding BlockSelectedCommand}" />
-                <MenuItem Header="_Unblock selected app" Command="{Binding UnblockSelectedCommand}" />
-                <Separator />
-                <MenuItem Header="Firewall _enabled"
-                          IsCheckable="True"
-                          IsChecked="{Binding FirewallEnabled, Mode=TwoWay}" />
-                <Separator />
-                <MenuItem Header="Remove _all Net-Peekier rules…"
-                          Command="{Binding RemoveAllRulesCommand}" />
-            </MenuItem>
+            <MenuItem Header="_Statistics" Click="OnOpenStats" />
             <MenuItem Header="_View">
-                <MenuItem Header="_Statistics…" Click="OnOpenStats" />
-                <MenuItem Header="C_onnections…" Click="OnOpenConnections" />
                 <MenuItem Header="_Packets…" Click="OnOpenPackets" />
             </MenuItem>
+            <MenuItem Header="Se_ttings">
+                <MenuItem Header="_Firewall and Tags…" Click="OnOpenFirewall" />
+                <MenuItem Header="_Preferences…" Click="OnOpenSettings" />
+            </MenuItem>
             <MenuItem Header="_Help">
-                <MenuItem Header="_About…" Click="OnAbout" />
+                <MenuItem Header="_About" Click="OnAbout" />
             </MenuItem>
         </Menu>
 
-        <!-- Status bar -->
-        <StatusBar DockPanel.Dock="Bottom">
-            <StatusBarItem><TextBlock Text="{Binding Status}" /></StatusBarItem>
-        </StatusBar>
+        <!-- ===== Dashboard bar (dark navy, ridge) ===== -->
+        <Border DockPanel.Dock="Top" Background="#10212e"
+                BorderBrush="#2a4a5e" BorderThickness="2"
+                Margin="6,6,6,3" Padding="0,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="2" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="2" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-        <!-- Dashboard -->
-        <Grid DockPanel.Dock="Top" Margin="8" Height="86">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <Border Grid.Column="0" BorderBrush="#bbb" BorderThickness="1" Padding="10" Margin="2"
-                    Background="#FAFAFA">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource DashLabel}" Text="UPLOAD ↑" />
-                    <TextBlock Style="{StaticResource DashValue}" Text="{Binding UpNow}" />
-                    <TextBlock Style="{StaticResource DashValue}" Text="{Binding UpPeak}" />
-                </StackPanel>
-            </Border>
-
-            <Border Grid.Column="1" BorderBrush="#bbb" BorderThickness="1" Padding="10" Margin="2"
-                    Background="#FAFAFA">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource DashLabel}" Text="DOWNLOAD ↓" />
-                    <TextBlock Style="{StaticResource DashValue}" Text="{Binding DownNow}" />
-                    <TextBlock Style="{StaticResource DashValue}" Text="{Binding DownPeak}" />
-                </StackPanel>
-            </Border>
-
-            <Border Grid.Column="2" BorderBrush="#bbb" BorderThickness="1" Padding="10" Margin="2"
-                    Background="#FAFAFA">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource DashLabel}" Text="SESSION" />
-                    <TextBlock Style="{StaticResource DashValue}" Text="{Binding SessionTotal}" />
-                </StackPanel>
-            </Border>
-        </Grid>
-
-        <!-- App list (grouped tree: process name -> PIDs) -->
-        <DockPanel>
-            <!-- Column header strip, aligned to the templates below. The
-                 left pad (28px) lines the headers up past the TreeView's
-                 expander toggle so columns sit under their data. -->
-            <Border DockPanel.Dock="Top" Background="#EEF1F4"
-                    BorderBrush="#D0D5DA" BorderThickness="0,0,0,1">
-                <Grid Margin="28,4,16,4">
+                <!-- UPLOAD block -->
+                <Grid Grid.Column="0" Margin="0,0,0,0" HorizontalAlignment="Center">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="200" />
-                        <ColumnDefinition Width="90"  />
-                        <ColumnDefinition Width="90"  />
-                        <ColumnDefinition Width="90"  />
-                        <ColumnDefinition Width="150" />
-                        <ColumnDefinition Width="70"  />
-                        <ColumnDefinition Width="55"  />
-                        <ColumnDefinition Width="*"   />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="Process"         FontWeight="Bold" />
-                    <TextBlock Grid.Column="1" Text="↑ Upload"        FontWeight="Bold" />
-                    <TextBlock Grid.Column="2" Text="↓ Download"      FontWeight="Bold" />
-                    <TextBlock Grid.Column="3" Text="Total"           FontWeight="Bold" />
-                    <TextBlock Grid.Column="4" Text="Listening Ports" FontWeight="Bold" />
-                    <TextBlock Grid.Column="5" Text="Tag"             FontWeight="Bold" />
-                    <TextBlock Grid.Column="6" Text="Blocked"         FontWeight="Bold" />
-                    <TextBlock Grid.Column="7" Text="WAN"             FontWeight="Bold" />
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                               Style="{StaticResource DashCaption}" Text="UPLOAD" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource DashTinyLabel}" Text="NOW" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource DashNow}"
+                               Foreground="#ffb454" MinWidth="150" Text="{Binding UpNow}" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource DashTinyLabel}" Text="PEAK" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource DashSmall}"
+                               Foreground="#3d6577" MinWidth="150" Text="{Binding UpPeak}" />
+                    <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource DashTinyLabel}" Text="TOTAL" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource DashSmall}"
+                               Foreground="#8fb6c8" MinWidth="150" Text="{Binding UpTotal}" />
                 </Grid>
-            </Border>
 
-            <TreeView x:Name="AppTree"
-                      ItemsSource="{Binding Groups}"
-                      SelectedItemChanged="OnTreeSelectionChanged"
-                      MouseDoubleClick="OnRowDoubleClick"
-                      BorderThickness="0"
-                      VirtualizingStackPanel.IsVirtualizing="True"
-                      VirtualizingStackPanel.VirtualizationMode="Recycling">
+                <Rectangle Grid.Column="1" Fill="#1d3a4d" Width="2" Margin="0,8" />
 
-                <TreeView.Resources>
-                    <!-- Shared row layout used by both group and leaf rows so
-                         columns line up regardless of node depth. -->
-                    <Style x:Key="RowCell" TargetType="TextBlock">
-                        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-                        <Setter Property="VerticalAlignment" Value="Center" />
-                    </Style>
+                <!-- DOWNLOAD block -->
+                <Grid Grid.Column="2" HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                               Style="{StaticResource DashCaption}" Text="DOWNLOAD" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource DashTinyLabel}" Text="NOW" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource DashNow}"
+                               Foreground="#7fe3ff" MinWidth="150" Text="{Binding DownNow}" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource DashTinyLabel}" Text="PEAK" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource DashSmall}"
+                               Foreground="#3d6577" MinWidth="150" Text="{Binding DownPeak}" />
+                    <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource DashTinyLabel}" Text="TOTAL" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource DashSmall}"
+                               Foreground="#8fb6c8" MinWidth="150" Text="{Binding DownTotal}" />
+                </Grid>
 
-                    <!-- Leaf (PID) template. -->
-                    <DataTemplate x:Key="LeafTemplate">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="200" />
-                                <ColumnDefinition Width="90"  />
-                                <ColumnDefinition Width="90"  />
-                                <ColumnDefinition Width="90"  />
-                                <ColumnDefinition Width="150" />
-                                <ColumnDefinition Width="70"  />
-                                <ColumnDefinition Width="55"  />
-                                <ColumnDefinition Width="*"   />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{Binding Display}"   Style="{StaticResource RowCell}" Foreground="#555" />
-                            <TextBlock Grid.Column="1" Text="{Binding Up}"        Style="{StaticResource RowCell}" FontFamily="Consolas" />
-                            <TextBlock Grid.Column="2" Text="{Binding Down}"      Style="{StaticResource RowCell}" FontFamily="Consolas" />
-                            <TextBlock Grid.Column="3" Text="{Binding Total}"     Style="{StaticResource RowCell}" FontFamily="Consolas" />
-                            <TextBlock Grid.Column="4" Text="{Binding Listening}" Style="{StaticResource RowCell}" />
-                            <TextBlock Grid.Column="5" Text="{Binding Tag}"       Style="{StaticResource RowCell}" />
-                            <CheckBox  Grid.Column="6" IsChecked="{Binding Blocked, Mode=OneWay}" IsHitTestVisible="False" VerticalAlignment="Center" />
-                            <CheckBox  Grid.Column="7" IsChecked="{Binding UsesWan, Mode=OneWay}" IsHitTestVisible="False" VerticalAlignment="Center" />
-                        </Grid>
-                    </DataTemplate>
-                </TreeView.Resources>
+                <Rectangle Grid.Column="3" Fill="#1d3a4d" Width="2" Margin="0,8" />
 
-                <!-- Group (process-name) template: hierarchical, children are
-                     ProcessRow leaves rendered with the leaf template. -->
-                <TreeView.ItemTemplate>
-                    <HierarchicalDataTemplate ItemsSource="{Binding Children}"
-                                              ItemTemplate="{StaticResource LeafTemplate}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="200" />
-                                <ColumnDefinition Width="90"  />
-                                <ColumnDefinition Width="90"  />
-                                <ColumnDefinition Width="90"  />
-                                <ColumnDefinition Width="150" />
-                                <ColumnDefinition Width="70"  />
-                                <ColumnDefinition Width="55"  />
-                                <ColumnDefinition Width="*"   />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{Binding Display}"   FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Grid.Column="1" Text="{Binding Up}"        FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="2" Text="{Binding Down}"      FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="3" Text="{Binding Total}"     FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="4" Text="{Binding Listening}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Grid.Column="5" Text="{Binding Tag}"       VerticalAlignment="Center" />
-                            <CheckBox  Grid.Column="6" IsChecked="{Binding Blocked, Mode=OneWay}" IsHitTestVisible="False" VerticalAlignment="Center" />
-                            <CheckBox  Grid.Column="7" IsChecked="{Binding UsesWan, Mode=OneWay}" IsHitTestVisible="False" VerticalAlignment="Center" />
-                        </Grid>
-                    </HierarchicalDataTemplate>
-                </TreeView.ItemTemplate>
+                <!-- SYSTEM block (CPU/GPU/RAM). RAM clock+temp intentionally blank. -->
+                <Grid Grid.Column="4" Margin="14,0,16,0" VerticalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
 
-                <TreeView.ItemContainerStyle>
-                    <Style TargetType="TreeViewItem">
-                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                        <Setter Property="Padding" Value="2" />
-                    </Style>
-                </TreeView.ItemContainerStyle>
-            </TreeView>
-        </DockPanel>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4"
+                               Style="{StaticResource DashCaption}" Text="SYSTEM" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Style="{StaticResource SysHeader}" Text="LOAD" />
+                    <TextBlock Grid.Row="1" Grid.Column="2" Style="{StaticResource SysHeader}" Text="CLOCK" />
+                    <TextBlock Grid.Row="1" Grid.Column="3" Style="{StaticResource SysHeader}" Text="TEMP" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource SysRowLabel}" Text="CPU" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource SysVal}" Foreground="#ffb454" MinWidth="46" Text="{Binding CpuLoad}" />
+                    <TextBlock Grid.Row="2" Grid.Column="2" Style="{StaticResource SysVal}" Foreground="#8fb6c8" MinWidth="62" Text="{Binding CpuClock}" />
+                    <TextBlock Grid.Row="2" Grid.Column="3" Style="{StaticResource SysVal}" Foreground="#8fb6c8" MinWidth="46" Text="{Binding CpuTemp}" />
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Style="{StaticResource SysRowLabel}" Text="GPU" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" Style="{StaticResource SysVal}" Foreground="#7fe3ff" MinWidth="46" Text="{Binding GpuLoad}" />
+                    <TextBlock Grid.Row="3" Grid.Column="2" Style="{StaticResource SysVal}" Foreground="#8fb6c8" MinWidth="62" Text="{Binding GpuClock}" />
+                    <TextBlock Grid.Row="3" Grid.Column="3" Style="{StaticResource SysVal}" Foreground="#8fb6c8" MinWidth="46" Text="{Binding GpuTemp}" />
+
+                    <!-- RAM: load only. Clock + temp removed per request. -->
+                    <TextBlock Grid.Row="4" Grid.Column="0" Style="{StaticResource SysRowLabel}" Text="RAM" />
+                    <TextBlock Grid.Row="4" Grid.Column="1" Style="{StaticResource SysVal}" Foreground="#a6e3a1" MinWidth="46" Text="{Binding RamLoad}" />
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- ===== Filter / firewall toolbar ===== -->
+        <Border DockPanel.Dock="Top" Background="#d6dce4" Padding="8,2,8,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: LAN/WAN filters -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <CheckBox Content="Show LAN" IsChecked="{Binding ShowLan, Mode=TwoWay}"
+                              VerticalAlignment="Center" />
+                    <CheckBox Content="Show WAN" IsChecked="{Binding ShowWan, Mode=TwoWay}"
+                              VerticalAlignment="Center" Margin="8,0,0,0" />
+                    <TextBlock Foreground="#666" Margin="12,0,0,0" VerticalAlignment="Center"
+                               Text="(LAN = local-only traffic; WAN = internet. Edit LAN ranges in Settings.)" />
+                </StackPanel>
+
+                <!-- Right: lockdown + firewall master switch + status light -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <CheckBox Content="Lockdown Mode" IsChecked="{Binding LockdownMode, Mode=TwoWay}"
+                              VerticalAlignment="Center" Margin="0,0,14,0" />
+                    <CheckBox Content="Enable Firewall" IsChecked="{Binding FirewallEnabled, Mode=TwoWay}"
+                              VerticalAlignment="Center" />
+                    <TextBlock Text="&#x25cf;" FontSize="12" VerticalAlignment="Center"
+                               Margin="6,0,2,0" Foreground="{Binding FirewallLightColor}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ===== Status bar (bottom) ===== -->
+        <Border DockPanel.Dock="Bottom" Background="#c3cbd6">
+            <TextBlock Text="{Binding Status}" FontFamily="Segoe UI" FontSize="11"
+                       Margin="6,2" />
+        </Border>
+
+        <!-- ===== Application list (grouped tree) ===== -->
+        <Grid Margin="6,3,6,3">
+            <!-- Column header strip aligned to the templates below. -->
+            <DockPanel>
+                <Border DockPanel.Dock="Top" Background="#c8d0da"
+                        BorderBrush="#a9b4c0" BorderThickness="0,0,0,1">
+                    <Grid Margin="24,3,18,3">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="185" />
+                            <ColumnDefinition Width="78"  />
+                            <ColumnDefinition Width="78"  />
+                            <ColumnDefinition Width="85"  />
+                            <ColumnDefinition Width="85"  />
+                            <ColumnDefinition Width="80"  />
+                            <ColumnDefinition Width="*"   />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Program"        FontWeight="Bold" />
+                        <TextBlock Grid.Column="1" Text="Upload"         FontWeight="Bold" HorizontalAlignment="Right" />
+                        <TextBlock Grid.Column="2" Text="Download"       FontWeight="Bold" HorizontalAlignment="Right" />
+                        <TextBlock Grid.Column="3" Text="Total Up"       FontWeight="Bold" HorizontalAlignment="Right" />
+                        <TextBlock Grid.Column="4" Text="Total Down"     FontWeight="Bold" HorizontalAlignment="Right" />
+                        <TextBlock Grid.Column="5" Text="Tag"            FontWeight="Bold" />
+                        <TextBlock Grid.Column="6" Text="Listening Ports" FontWeight="Bold" />
+                    </Grid>
+                </Border>
+
+                <TreeView x:Name="AppTree"
+                          ItemsSource="{Binding Groups}"
+                          SelectedItemChanged="OnTreeSelectionChanged"
+                          MouseDoubleClick="OnRowDoubleClick"
+                          BorderThickness="1" BorderBrush="#a9b4c0"
+                          FontFamily="Segoe UI" FontSize="12"
+                          VirtualizingStackPanel.IsVirtualizing="True"
+                          VirtualizingStackPanel.VirtualizationMode="Recycling">
+
+                    <TreeView.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Show connections"            Click="OnCtxConnections" />
+                            <Separator />
+                            <MenuItem Header="End Process"                 Click="OnCtxEndProcess" />
+                            <MenuItem Header="Open Program Path"           Click="OnCtxOpenPath" />
+                            <Separator />
+                            <MenuItem Header="Set tag…"                    Click="OnCtxSetTag" />
+                            <MenuItem Header="Remove tag"                  Click="OnCtxRemoveTag" />
+                            <MenuItem Header="Block (firewall)"            Click="OnCtxBlock" />
+                            <MenuItem Header="Unblock"                     Click="OnCtxUnblock" />
+                            <MenuItem Header="Allow (Lockdown allow-list)" Click="OnCtxAllow" />
+                            <MenuItem Header="Remove from allow-list"      Click="OnCtxRemoveAllow" />
+                            <Separator />
+                            <MenuItem Header="Firewall and Tags…"          Click="OnOpenFirewall" />
+                        </ContextMenu>
+                    </TreeView.ContextMenu>
+
+                    <TreeView.Resources>
+                        <Style x:Key="Cell" TargetType="TextBlock">
+                            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                            <Setter Property="VerticalAlignment" Value="Center" />
+                        </Style>
+
+                        <!-- Leaf (PID) template -->
+                        <DataTemplate x:Key="LeafTemplate">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="185" />
+                                    <ColumnDefinition Width="78"  />
+                                    <ColumnDefinition Width="78"  />
+                                    <ColumnDefinition Width="85"  />
+                                    <ColumnDefinition Width="85"  />
+                                    <ColumnDefinition Width="80"  />
+                                    <ColumnDefinition Width="*"   />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding Display}"   Style="{StaticResource Cell}" Foreground="#555" />
+                                <TextBlock Grid.Column="1" Text="{Binding Up}"        Style="{StaticResource Cell}" FontFamily="Consolas" HorizontalAlignment="Right" />
+                                <TextBlock Grid.Column="2" Text="{Binding Down}"      Style="{StaticResource Cell}" FontFamily="Consolas" HorizontalAlignment="Right" />
+                                <TextBlock Grid.Column="3" Text="{Binding TotalUp}"   Style="{StaticResource Cell}" FontFamily="Consolas" HorizontalAlignment="Right" />
+                                <TextBlock Grid.Column="4" Text="{Binding TotalDown}" Style="{StaticResource Cell}" FontFamily="Consolas" HorizontalAlignment="Right" />
+                                <TextBlock Grid.Column="5" Text="{Binding Tag}"       Style="{StaticResource Cell}" />
+                                <TextBlock Grid.Column="6" Text="{Binding Listening}" Style="{StaticResource Cell}" />
+                            </Grid>
+                        </DataTemplate>
+                    </TreeView.Resources>
+
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate ItemsSource="{Binding Children}"
+                                                  ItemTemplate="{StaticResource LeafTemplate}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="185" />
+                                    <ColumnDefinition Width="78"  />
+                                    <ColumnDefinition Width="78"  />
+                                    <ColumnDefinition Width="85"  />
+                                    <ColumnDefinition Width="85"  />
+                                    <ColumnDefinition Width="80"  />
+                                    <ColumnDefinition Width="*"   />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding Display}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                           Foreground="{Binding RowColor}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Up}"        FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                <TextBlock Grid.Column="2" Text="{Binding Down}"      FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                <TextBlock Grid.Column="3" Text="{Binding TotalUp}"   FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                <TextBlock Grid.Column="4" Text="{Binding TotalDown}" FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                <TextBlock Grid.Column="5" Text="{Binding Tag}"       VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="6" Text="{Binding Listening}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+
+                    <TreeView.ItemContainerStyle>
+                        <Style TargetType="TreeViewItem">
+                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                            <Setter Property="Padding" Value="2" />
+                        </Style>
+                    </TreeView.ItemContainerStyle>
+                </TreeView>
+            </DockPanel>
+        </Grid>
     </DockPanel>
 </Window>

@@ -18,11 +18,13 @@ public interface IProcessNode
     string Display   { get; }   // name (group) or "PID 1234" (leaf)
     string Up        { get; }
     string Down      { get; }
-    string Total     { get; }
+    string TotalUp   { get; }
+    string TotalDown { get; }
     string Listening { get; }
     string Tag       { get; }
     bool   Blocked   { get; }
     bool   UsesWan   { get; }
+    string RowColor  { get; }   // text tint: blocked = red, active = dark, idle = grey
 }
 
 public sealed class ProcessGroup : ObservableObject, IProcessNode
@@ -40,8 +42,11 @@ public sealed class ProcessGroup : ObservableObject, IProcessNode
     private string _down = "0 B/s";
     public string Down { get => _down; private set => SetField(ref _down, value); }
 
-    private string _total = "0 B";
-    public string Total { get => _total; private set => SetField(ref _total, value); }
+    private string _totalUp = "-";
+    public string TotalUp { get => _totalUp; private set => SetField(ref _totalUp, value); }
+
+    private string _totalDown = "-";
+    public string TotalDown { get => _totalDown; private set => SetField(ref _totalDown, value); }
 
     private string _listening = "";
     public string Listening { get => _listening; private set => SetField(ref _listening, value); }
@@ -54,6 +59,9 @@ public sealed class ProcessGroup : ObservableObject, IProcessNode
 
     private bool _usesWan;
     public bool UsesWan { get => _usesWan; private set => SetField(ref _usesWan, value); }
+
+    private string _rowColor = "#222";
+    public string RowColor { get => _rowColor; private set => SetField(ref _rowColor, value); }
 
     private bool _isExpanded;
     public bool IsExpanded { get => _isExpanded; set => SetField(ref _isExpanded, value); }
@@ -91,11 +99,15 @@ public sealed class ProcessGroup : ObservableObject, IProcessNode
         Display   = Name;
         Up        = Formatting.HumanSpeed(up, speedUnit);
         Down      = Formatting.HumanSpeed(down, speedUnit);
-        Total     = Formatting.HumanBytes(tup + tdown);
+        TotalUp   = tup > 0 ? Formatting.HumanBytes(tup) : "-";
+        TotalDown = tdown > 0 ? Formatting.HumanBytes(tdown) : "-";
         Listening = Formatting.PortsStr(ports.ToList());
         Tag       = tag;
         Blocked   = blocked;
         UsesWan   = usesWan;
         Single    = members.Count == 1;
+        // Row tint mirrors the Python stripe tags: blocked rows red, rows with
+        // live traffic dark/bold, idle rows grey.
+        RowColor  = blocked ? "#b5302a" : ((up + down) > 0 ? "#1a1a1a" : "#777");
     }
 }

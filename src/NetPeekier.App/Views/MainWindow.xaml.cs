@@ -16,7 +16,7 @@ public partial class MainWindow : Window
             InitializeComponent();
             NetPeekier.Core.Diag.Log("MainWindow.ctor: InitializeComponent ok");
             var app = (App)System.Windows.Application.Current;
-            _vm = new MainViewModel(app.NetworkMonitor);
+            _vm = new MainViewModel(app.NetworkMonitor, app.SystemMonitor);
             NetPeekier.Core.Diag.Log("MainWindow.ctor: MainViewModel constructed");
             DataContext = _vm;
             Closed += (_, _) => _vm.Stop();
@@ -115,4 +115,29 @@ public partial class MainWindow : Window
                 return (null, "");
         }
     }
+
+    // ---- context menu handlers -----------------------------------------
+    // Each delegates to the VM, which owns the monitor + settings. The VM
+    // surfaces any user-facing messages (no exe path, access denied, etc.).
+
+    private void OnCtxConnections(object sender, RoutedEventArgs e) => OnOpenConnections(sender, e);
+
+    private void OnCtxEndProcess(object sender, RoutedEventArgs e)
+    {
+        var (pid, name) = ResolveSelectedPid();
+        if (pid is null) return;
+        if (MessageBox.Show(
+                $"End {name} (PID {pid})?\n\nUnsaved work in that program will be lost.",
+                "End Process", MessageBoxButton.YesNo, MessageBoxImage.Warning)
+            != MessageBoxResult.Yes) return;
+        _vm.EndProcess(pid.Value);
+    }
+
+    private void OnCtxOpenPath(object sender, RoutedEventArgs e)   => _vm.OpenSelectedPath();
+    private void OnCtxSetTag(object sender, RoutedEventArgs e)     => _vm.SetTagOnSelected(this);
+    private void OnCtxRemoveTag(object sender, RoutedEventArgs e)  => _vm.RemoveTagFromSelected();
+    private void OnCtxBlock(object sender, RoutedEventArgs e)      => _vm.BlockSelectedExe(true);
+    private void OnCtxUnblock(object sender, RoutedEventArgs e)    => _vm.BlockSelectedExe(false);
+    private void OnCtxAllow(object sender, RoutedEventArgs e)      => _vm.AllowSelected(true);
+    private void OnCtxRemoveAllow(object sender, RoutedEventArgs e)=> _vm.AllowSelected(false);
 }

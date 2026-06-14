@@ -210,6 +210,43 @@ machine with NuGet access — you'll want `TraceEvent` for Phase 5.
 
 ## Status log (newest first)
 
+- **2026-06-14 — GUI brought to full Python parity + app icon/logo.**
+  - MainWindow rebuilt to match the Python layout exactly: title
+    "Net-Peekier  -  per-process network monitor", 880×560 default /
+    700×420 min, main bg #d6dce4. Dark-navy dashboard (#10212e, ridge)
+    with three columns separated by #1d3a4d dividers: UPLOAD (orange
+    #ffb454), DOWNLOAD (cyan #7fe3ff), and SYSTEM. Each up/down column
+    shows NOW (Consolas bold) / PEAK / TOTAL.
+  - SYSTEM column integrated into the dashboard (replaces the old
+    "session total"): CPU / GPU / RAM rows with LOAD / CLOCK / TEMP.
+    Per request, RAM shows LOAD only — its clock + temp are omitted.
+    Fed by the existing SystemMonitor; MHz→GHz formatting, °/% suffixes
+    match sysstats.py.
+  - Filter toolbar matches Python: Show LAN / Show WAN on the left (with
+    the explanatory hint), Lockdown Mode + Enable Firewall + the ● status
+    light (green #1e9e3e on / red #cc2b2b off) on the right. Toggling
+    Lockdown auto-enables the firewall, exactly like the original.
+  - Process list shows the process NAME (grouped tree, name → PIDs), not
+    a bare PID column. Right-click context menu ported in full: Show
+    connections / End Process / Open Program Path / Set tag… / Remove tag
+    / Block / Unblock / Allow (Lockdown allow-list) / Remove from
+    allow-list / Firewall and Tags…. Row text tint mirrors the Python
+    stripe tags (blocked = red, active = dark, idle = grey).
+  - Lockdown mode fully wired: new NetworkMonitor.SetLockdown(), the
+    LockdownSweep default-deny enforcement, and the per-exe allow/block
+    prompt (LockdownDialog) that was already present.
+  - Menus match Python: File ▸ Exit; Statistics (direct); View ▸ Packets;
+    Settings ▸ (Firewall and Tags, Preferences); Help ▸ About.
+  - Status bar (bg #c3cbd6) shows backend mode + a "NOT elevated" hint
+    when not admin.
+  - App icon + logo: the uploaded PNG converted to a multi-resolution
+    app.ico (16→256 px) wired via <ApplicationIcon>; the icon also shows
+    as the window icon and in the About box. Assets bundled as WPF
+    resources.
+  - Added a small TagPromptDialog (WPF has no built-in InputBox) for the
+    Set-tag action. 97/97 Core tests still pass; VM + row/group verified
+    against stubs.
+
 - **2026-06-14 — Packet capture + hex view restored (via Npcap).**
   - The payload/hex packet view — originally dropped with WinDivert — is
     back, built on Npcap (SharpPcap 6.3 + PacketDotNet 1.4). Read-only

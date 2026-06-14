@@ -334,6 +334,23 @@ public sealed class NetworkMonitor : IDisposable
         }
     }
 
+    /// <summary>
+    /// Toggle Lockdown (default-deny) mode. When turned off, any blocks the
+    /// lockdown sweep installed are cleared on the next tick (LockdownSweep
+    /// sees the flag off and calls ClearLockdownBlocks). When turned on, the
+    /// caller is expected to have ensured the firewall is enabled, since
+    /// lockdown can only enforce through it.
+    /// </summary>
+    public void SetLockdown(bool on)
+    {
+        Settings.LockdownMode = on;
+        Settings.Save();
+        if (!on)
+        {
+            try { ClearLockdownBlocks(); } catch { /* ignore */ }
+        }
+    }
+
     /// <summary>Emergency cleanup: drop every filter and clear block state.</summary>
     public (int Count, string Message) RemoveAllFirewallRules()
     {
