@@ -24,19 +24,33 @@ public sealed class MainViewModel : ObservableObject
 
     public MainViewModel(NetworkMonitor monitor)
     {
+        Diag.Log("MainViewModel.ctor: begin");
         _monitor = monitor;
 
         _timer = new DispatcherTimer(DispatcherPriority.Background) { Interval = RefreshInterval };
-        _timer.Tick += (_, _) => Refresh();
+        _timer.Tick += (_, _) => SafeRefresh();
         _timer.Start();
 
         BlockSelectedCommand   = new RelayCommand(BlockSelected,   () => CanModifySelected);
         UnblockSelectedCommand = new RelayCommand(UnblockSelected, () => CanModifySelected);
         RemoveAllRulesCommand  = new RelayCommand(RemoveAllRules);
         ToggleFirewallCommand  = new RelayCommand(ToggleFirewall);
+        Diag.Log("MainViewModel.ctor: timer + commands wired");
 
         // First refresh runs immediately so the first paint isn't blank.
-        Refresh();
+        // Use SafeRefresh so a bad Settings.SpeedUnit or empty snapshot
+        // can't crash the whole window construction.
+        SafeRefresh();
+        Diag.Log("MainViewModel.ctor: first refresh done");
+    }
+
+    private void SafeRefresh()
+    {
+        try { Refresh(); }
+        catch (Exception ex)
+        {
+            Diag.LogException("MainViewModel.Refresh", ex);
+        }
     }
 
     // ---- bindable state -------------------------------------------------

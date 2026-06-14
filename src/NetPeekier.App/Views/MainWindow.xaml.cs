@@ -10,12 +10,24 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
-        InitializeComponent();
-        var app = (App)System.Windows.Application.Current;
-        _vm = new MainViewModel(app.NetworkMonitor);
-        DataContext = _vm;
-        Closed += (_, _) => _vm.Stop();
-        WindowGeometryPersistence.Apply(this, "main");
+        NetPeekier.Core.Diag.Log("MainWindow.ctor: begin");
+        try
+        {
+            InitializeComponent();
+            NetPeekier.Core.Diag.Log("MainWindow.ctor: InitializeComponent ok");
+            var app = (App)System.Windows.Application.Current;
+            _vm = new MainViewModel(app.NetworkMonitor);
+            NetPeekier.Core.Diag.Log("MainWindow.ctor: MainViewModel constructed");
+            DataContext = _vm;
+            Closed += (_, _) => _vm.Stop();
+            WindowGeometryPersistence.Apply(this, "main");
+            NetPeekier.Core.Diag.Log("MainWindow.ctor: done");
+        }
+        catch (Exception ex)
+        {
+            NetPeekier.Core.Diag.LogException("MainWindow.ctor", ex);
+            throw;
+        }
     }
 
     private void OnExit(object sender, RoutedEventArgs e) => Close();

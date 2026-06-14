@@ -91,11 +91,14 @@ public sealed class NetworkMonitor : IDisposable
 
     public NetworkMonitor(TimeSpan? interval = null)
     {
+        Diag.Log("NetworkMonitor.ctor: begin");
         _interval  = interval ?? TimeSpan.FromSeconds(1);
         Settings   = Settings.Load();
+        Diag.Log("NetworkMonitor.ctor: Settings loaded");
         ProcessMap = new ProcessMap();
         Backend    = new EtwMonitor(ProcessMap);
         History    = new HistoryLogger(Path.Combine(Paths.EnsureLogDir(), "history.jsonl"));
+        Diag.Log("NetworkMonitor.ctor: ProcessMap+EtwMonitor+History constructed");
 
         _lanNets = ParseLanNets(Settings.LanRanges);
 
@@ -106,30 +109,54 @@ public sealed class NetworkMonitor : IDisposable
         _lastIoDown   = io.BytesReceived;
         _lastIoTime   = _wall.Elapsed;
         _lastTick     = _wall.Elapsed;
+        Diag.Log("NetworkMonitor.ctor: system IO baseline taken");
 
         // Reconcile: anything currently in our WFP sublayer that we created
         // should also be in settings (and vice-versa on apply).
         try
         {
+            Diag.Log("NetworkMonitor.ctor: about to access Firewall (may open WFP engine)");
             if (Firewall is { } fw)
+            {
+                Diag.Log("NetworkMonitor.ctor: WFP engine open; calling ListBlocked()");
                 foreach (var exe in fw.ListBlocked())
                     if (!string.IsNullOrEmpty(exe) && !Settings.BlockedExes.Contains(exe))
                         Settings.BlockedExes.Add(exe);
+                Diag.Log("NetworkMonitor.ctor: WFP reconcile done");
+            }
+            else
+            {
+                Diag.Log("NetworkMonitor.ctor: Firewall is null (not on Windows / not elevated / WFP open failed)");
+            }
         }
-        catch
+        catch (Exception ex)
         {
+            Diag.LogException("NetworkMonitor.ctor / WFP reconcile", ex);
             // Best-effort: missing filters reconcile next time the user
             // applies a change.
         }
+        Diag.Log("NetworkMonitor.ctor: done");
     }
 
     public void Start()
     {
-        if (_worker is not null) return;
-        ApplySettings(syncFirewall: true);
-        try { Backend.Start(); } catch { /* ETW not implemented yet */ }
+        Diag.Log("NetworkMonitor.Start: begin");
+        if (_worker is not null) { Diag.Log("NetworkMonitor.Start: already running, no-op"); return; }
+        try
+        {
+            ApplySettings(syncFirewall: true);
+            Diag.Log("NetworkMonitor.Start: ApplySettings done");
+        }
+        catch (Exception ex)
+        {
+            Diag.LogException("NetworkMonitor.Start / ApplySettings", ex);
+            // Don't rethrow — without the firewall sync we still want the
+            // monitor loop to run.
+        }
+        try { Backend.Start(); } catch (Exception ex) { Diag.LogException("NetworkMonitor.Start / Backend.Start", ex); }
         _cts = new CancellationTokenSource();
         _worker = Task.Run(() => Loop(_cts.Token));
+        Diag.Log("NetworkMonitor.Start: worker task started");
     }
 
     public void Stop()
@@ -324,14 +351,18 @@ public sealed class NetworkMonitor : IDisposable
 
     private async Task Loop(CancellationToken ct)
     {
+        Diag.Log("NetworkMonitor.Loop: tick worker entered");
+        int tickCount = 0;
         while (!ct.IsCancellationRequested)
         {
             var t0 = _wall.Elapsed;
             try { Tick(); }
             catch (Exception exc)
             {
-                Console.Error.WriteLine($"[netpeeker] monitor tick error: {exc}");
+                Diag.LogException("NetworkMonitor.Tick", exc);
             }
+            if (++tickCount == 1) Diag.Log("NetworkMonitor.Loop: first tick completed");
+
             var dt = _wall.Elapsed - t0;
             var sleep = _interval - dt;
             if (sleep < TimeSpan.FromMilliseconds(50))
@@ -339,6 +370,7 @@ public sealed class NetworkMonitor : IDisposable
             try { await Task.Delay(sleep, ct); }
             catch (TaskCanceledException) { break; }
         }
+        Diag.Log("NetworkMonitor.Loop: tick worker exiting");
     }
 
     private void Tick()
