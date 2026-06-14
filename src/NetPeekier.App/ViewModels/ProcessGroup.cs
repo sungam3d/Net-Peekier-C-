@@ -71,7 +71,7 @@ public sealed class ProcessGroup : ObservableObject, IProcessNode
     public void RefreshAggregate(IReadOnlyList<ProcStat> members, string speedUnit)
     {
         double up = 0, down = 0;
-        long tup = 0, tdown = 0;
+        double tup = 0, tdown = 0;
         bool blocked = false, usesWan = false;
         string tag = "";
         var ports = new SortedSet<int>();
