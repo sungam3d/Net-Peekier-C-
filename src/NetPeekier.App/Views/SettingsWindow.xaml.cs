@@ -31,8 +31,6 @@ public partial class SettingsWindow : Window
         IdleBox.Text          = s.IdleHideMinutes?.ToString() ?? "";
         LockdownCheck.IsChecked = s.LockdownMode;
         AllowMinBox.Text      = s.AllowMinutes.ToString();
-        ShowLanCheck.IsChecked = s.ShowLan;
-        ShowWanCheck.IsChecked = s.ShowWan;
         PurgeBox.Text         = s.PacketPurgeMinutes?.ToString() ?? "";
         LanBox.Text           = string.Join(Environment.NewLine, s.LanRanges);
     }
@@ -77,8 +75,6 @@ public partial class SettingsWindow : Window
         s.IdleHideMinutes = idle;
         s.LockdownMode    = LockdownCheck.IsChecked == true;
         s.AllowMinutes    = allowMin;
-        s.ShowLan         = ShowLanCheck.IsChecked == true;
-        s.ShowWan         = ShowWanCheck.IsChecked == true;
         s.PacketPurgeMinutes = purge;
         s.LanRanges       = lanLines;
 

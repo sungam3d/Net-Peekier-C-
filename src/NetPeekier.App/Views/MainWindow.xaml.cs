@@ -44,12 +44,6 @@ public partial class MainWindow : Window
         win.ShowDialog();
     }
 
-    private void OnOpenStats(object sender, RoutedEventArgs e)
-    {
-        var win = new StatsWindow { Owner = this };
-        win.Show();
-    }
-
     private void OnOpenPackets(object sender, RoutedEventArgs e)
     {
         var win = new PacketsWindow { Owner = this };

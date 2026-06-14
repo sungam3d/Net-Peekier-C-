@@ -45,7 +45,7 @@
             <Setter Property="Foreground" Value="#3d6577" />
             <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="FontSize" Value="9" />
-            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="Margin" Value="8,0,0,0" />
         </Style>
         <Style x:Key="SysRowLabel" TargetType="TextBlock">
@@ -59,7 +59,7 @@
         <Style x:Key="SysVal" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="Consolas" />
             <Setter Property="FontSize" Value="13" />
-            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Margin" Value="8,0,0,0" />
         </Style>
@@ -72,7 +72,6 @@
             <MenuItem Header="_File">
                 <MenuItem Header="E_xit" Click="OnExit" />
             </MenuItem>
-            <MenuItem Header="_Statistics" Click="OnOpenStats" />
             <MenuItem Header="_View">
                 <MenuItem Header="_Packets…" Click="OnOpenPackets" />
             </MenuItem>

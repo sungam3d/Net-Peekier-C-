@@ -46,6 +46,16 @@ public partial class ConnectionsWindow : Window
             return;
         }
         ConnGrid.ItemsSource = p.Connections.ToList();
-        StatusLine.Text = $"{p.Connections.Count} connection(s)";
+        StatusLine.Text = $"{p.Connections.Count} connection(s)  —  double-click to see this process's packets";
+    }
+
+    private void OnConnectionDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        // Open the packet feed pre-filtered to this process. The packet view
+        // captures at the adapter and correlates by local port, so it shows
+        // this PID's traffic rather than a single socket's — same model as
+        // the original tool.
+        var win = new PacketsWindow(_pid) { Owner = this };
+        win.Show();
     }
 }

@@ -1,7 +1,7 @@
 <Window x:Class="NetPeekier.App.Views.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Net-Peekier — Settings"
+        Title="Net-Peekier — Preferences"
         Width="540" Height="500" MinWidth="460" MinHeight="420"
         WindowStartupLocation="CenterOwner">
 
@@ -20,7 +20,6 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
-                <RowDefinition Height="34" />
                 <RowDefinition Height="34" />
                 <RowDefinition Height="34" />
                 <RowDefinition Height="34" />
@@ -61,25 +60,17 @@
                 <TextBox x:Name="AllowMinBox" Width="80" HorizontalAlignment="Left" />
             </DockPanel>
 
-            <!-- show lan / wan -->
-            <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center"
-                       Text="Show in process list:" />
-            <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <CheckBox x:Name="ShowLanCheck" Content="LAN traffic" Margin="0,0,12,0" />
-                <CheckBox x:Name="ShowWanCheck" Content="WAN traffic" />
-            </StackPanel>
-
             <!-- packet purge -->
-            <TextBlock Grid.Row="5" Grid.Column="0" VerticalAlignment="Center"
+            <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center"
                        Text="Forget pids after:" />
-            <DockPanel Grid.Row="5" Grid.Column="1" VerticalAlignment="Center">
+            <DockPanel Grid.Row="4" Grid.Column="1" VerticalAlignment="Center">
                 <TextBlock Text=" minutes (blank = never)" DockPanel.Dock="Right"
                            Foreground="#666" VerticalAlignment="Center" Margin="6,0,0,0" />
                 <TextBox x:Name="PurgeBox" Width="80" HorizontalAlignment="Left" />
             </DockPanel>
 
             <!-- LAN ranges -->
-            <DockPanel Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,12,0,0">
+            <DockPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,12,0,0">
                 <TextBlock DockPanel.Dock="Top" Text="LAN ranges (CIDR, one per line):" />
                 <TextBlock DockPanel.Dock="Bottom" Foreground="#666" TextWrapping="Wrap"
                            Text="An IP outside every range listed is treated as WAN (internet) traffic. Default ranges cover private + loopback + link-local for IPv4 and IPv6." />

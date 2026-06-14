@@ -19,7 +19,11 @@
                   GridLinesVisibility="Horizontal"
                   AlternationCount="2"
                   RowBackground="White"
-                  AlternatingRowBackground="#F5F7FA">
+                  AlternatingRowBackground="#F5F7FA"
+                  MouseDoubleClick="OnConnectionDoubleClick">
+            <DataGrid.ToolTip>
+                <TextBlock Text="Double-click a connection to open the packet feed for this process." />
+            </DataGrid.ToolTip>
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Proto"      Binding="{Binding Protocol}"        Width="60"  />
                 <DataGridTextColumn Header="Dir"        Binding="{Binding DirectionArrow}"  Width="50"  />

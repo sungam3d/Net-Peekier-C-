@@ -36,9 +36,16 @@ public partial class PacketsWindow : Window
         public required CapturedPacket Source { get; init; }   // for the hex view
     }
 
-    public PacketsWindow()
+    // When opened from a Connections window, this pre-selects the packet
+    // filter to that process so the user lands straight on its traffic.
+    private readonly int? _initialPid;
+
+    public PacketsWindow() : this(null) { }
+
+    public PacketsWindow(int? initialPid)
     {
         InitializeComponent();
+        _initialPid = initialPid;
         var app = (App)System.Windows.Application.Current;
         _cap = app.PacketCapture;
         _monitor = app.NetworkMonitor;
@@ -118,6 +125,8 @@ public partial class PacketsWindow : Window
 
     private void OnRecheck(object sender, RoutedEventArgs e) => StartCaptureOrPrompt();
 
+    private bool _initialFilterApplied;
+
     private void PopulateFilter()
     {
         // Build a PID filter list from current processes with network activity.
@@ -126,11 +135,27 @@ public partial class PacketsWindow : Window
         foreach (var p in procs.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
             items.Add(new FilterItem($"{p.Name} (PID {p.Pid})", p.Pid));
 
-        var prev = (FilterCombo.SelectedItem as FilterItem)?.Pid;
+        // If launched from a Connections window, lock onto that PID the first
+        // time; afterwards just preserve whatever the user has chosen.
+        int? want;
+        if (!_initialFilterApplied && _initialPid is int ip)
+        {
+            want = ip;
+            _initialFilterApplied = true;
+            // Make sure the entry exists even if that proc has no live socket
+            // in this snapshot yet.
+            if (items.All(i => i.Pid != ip))
+                items.Add(new FilterItem($"PID {ip}", ip));
+        }
+        else
+        {
+            want = (FilterCombo.SelectedItem as FilterItem)?.Pid;
+        }
+
         FilterCombo.ItemsSource = items;
         FilterCombo.DisplayMemberPath = nameof(FilterItem.Label);
-        // Restore previous selection if still present, else "All".
-        FilterCombo.SelectedItem = items.FirstOrDefault(i => i.Pid == prev) ?? items[0];
+        // Select the wanted PID if present, else "All".
+        FilterCombo.SelectedItem = items.FirstOrDefault(i => i.Pid == want) ?? items[0];
     }
 
     private sealed record FilterItem(string Label, int? Pid);

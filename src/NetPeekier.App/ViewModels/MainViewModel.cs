@@ -401,7 +401,7 @@ public sealed class MainViewModel : ObservableObject
         var byName = new Dictionary<string, List<ProcStat>>();
         foreach (var p in filtered)
         {
-            var key = string.IsNullOrEmpty(p.Name) ? "(unknown)" : p.Name;
+            var key = string.IsNullOrEmpty(p.Name) ? "Unknown" : p.Name;
             if (!byName.TryGetValue(key, out var list))
                 byName[key] = list = new List<ProcStat>();
             list.Add(p);
@@ -435,9 +435,14 @@ public sealed class MainViewModel : ObservableObject
                     group.Children.Add(row);
                 }
                 row.Refresh(m, unit);
-                // Leaf label: bare "PID n" inside a multi-member group, full
-                // "name (PID n)" when the group has a single member.
-                row.Display = members.Count == 1 ? $"{name}  (PID {m.Pid})" : $"PID {m.Pid}";
+                // Leaf label always carries the process name alongside the
+                // PID so a row is identifiable at a glance. If the name
+                // couldn't be resolved it's already a "PID n" fallback, in
+                // which case we don't double it up.
+                var nm = string.IsNullOrEmpty(m.Name) ? name : m.Name;
+                row.Display = nm.StartsWith("PID ", StringComparison.Ordinal)
+                    ? nm
+                    : $"{nm}  (PID {m.Pid})";
             }
 
             // Drop children that vanished.
