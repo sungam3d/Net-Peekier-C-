@@ -146,7 +146,10 @@ NetPeekier.sln
 - [x] Window-geometry persistence: WindowGeometryPersistence helper
       restores Left/Top/Width/Height on open and saves on close (Main,
       Connections, Firewall use it)
-- [ ] StatsWindow (depends on SystemStats backend — Phase 5)
+- [x] StatsWindow + SystemStats backend (CPU/RAM via PerformanceCounter,
+      CPU clock via registry, optional CPU/GPU/RAM temps + GPU load/clock
+      via LibreHardwareMonitorLib.dll loaded by reflection — drop the dll
+      next to the exe to light up temps, absent = "--")
 - [ ] Hierarchical app list (svchost expand UX — polish task)
 
 ### Phase 5 — Polish + publish
@@ -195,6 +198,26 @@ machine with NuGet access — you'll want `TraceEvent` for Phase 5.
 ---
 
 ## Status log (newest first)
+
+- **2026-06-14 — SystemStats + StatsWindow (CPU/GPU/RAM dashboard).**
+  - `SystemStats.cs` ported from sysstats.py. CPU load + RAM% via
+    `PerformanceCounter`, CPU base clock from the registry. Optional
+    temps/GPU details via LibreHardwareMonitorLib.dll loaded entirely by
+    reflection — no compile-time dependency, drop-in: present = temps
+    appear, absent = "--". Background polling thread (2s), snapshot read
+    by the GUI. `_pick`/`_pick_temp` headline-sensor selection ported
+    faithfully (prefers package/core sensors, drops bogus <=0 / >150°C
+    readings, avoids GPU hotspot/junction when a better reading exists).
+  - `StatsWindow` shows three cards (CPU/GPU/Memory), polls 1Hz, status
+    bar names the temp source. Wired into View → Statistics. App now owns
+    a `SystemMonitor` alongside `NetworkMonitor`, started/stopped together.
+  - `NetPeekier.Native.csproj` gains `System.Diagnostics.PerformanceCounter`
+    and `Microsoft.Win32.Registry` package refs.
+  - Refactor: moved `ValidExe` path-validation from `WfpFirewall` (Native)
+    into `ExeValidation` (Core). WfpFirewall now delegates. This keeps the
+    test project pure-Core — it no longer references Native, so the
+    offline `dotnet run` test cycle works again now that Native needs
+    NuGet. 97/97 tests still pass.
 
 - **2026-06-14 — Phase 2 complete: real ETW per-process byte counting.**
   - `EtwMonitor.cs` rewritten against

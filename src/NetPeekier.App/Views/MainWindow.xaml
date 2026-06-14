@@ -43,7 +43,7 @@
                           Command="{Binding RemoveAllRulesCommand}" />
             </MenuItem>
             <MenuItem Header="_View">
-                <MenuItem Header="_Statistics…" IsEnabled="False" />
+                <MenuItem Header="_Statistics…" Click="OnOpenStats" />
                 <MenuItem Header="C_onnections…" Click="OnOpenConnections" />
             </MenuItem>
             <MenuItem Header="_Help">

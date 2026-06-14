@@ -1,0 +1,112 @@
+<Window x:Class="NetPeekier.App.Views.StatsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Net-Peekier — System stats"
+        Width="440" Height="420" MinWidth="380" MinHeight="360"
+        WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <Style x:Key="GroupHeader" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="Foreground" Value="#333" />
+        </Style>
+        <Style x:Key="Metric" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+        <Style x:Key="MetricLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#666" />
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem><TextBlock x:Name="SourceLine" Text="" /></StatusBarItem>
+        </StatusBar>
+
+        <StackPanel Margin="16">
+            <!-- CPU -->
+            <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="4"
+                    Padding="12" Margin="0,0,0,10" Background="#FAFAFA">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource GroupHeader}" Text="CPU" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Style="{StaticResource MetricLabel}" Text="Load" />
+                            <TextBlock x:Name="CpuLoad" Style="{StaticResource Metric}" Text="--" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Style="{StaticResource MetricLabel}" Text="Clock" />
+                            <TextBlock x:Name="CpuClock" Style="{StaticResource Metric}" Text="--" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Style="{StaticResource MetricLabel}" Text="Temp" />
+                            <TextBlock x:Name="CpuTemp" Style="{StaticResource Metric}" Text="--" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- GPU -->
+            <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="4"
+                    Padding="12" Margin="0,0,0,10" Background="#FAFAFA">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource GroupHeader}" Text="GPU" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Style="{StaticResource MetricLabel}" Text="Load" />
+                            <TextBlock x:Name="GpuLoad" Style="{StaticResource Metric}" Text="--" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Style="{StaticResource MetricLabel}" Text="Clock" />
+                            <TextBlock x:Name="GpuClock" Style="{StaticResource Metric}" Text="--" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Style="{StaticResource MetricLabel}" Text="Temp" />
+                            <TextBlock x:Name="GpuTemp" Style="{StaticResource Metric}" Text="--" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- RAM -->
+            <Border BorderBrush="#DDD" BorderThickness="1" CornerRadius="4"
+                    Padding="12" Background="#FAFAFA">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource GroupHeader}" Text="Memory" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Style="{StaticResource MetricLabel}" Text="Used" />
+                            <TextBlock x:Name="RamUsed" Style="{StaticResource Metric}" Text="--" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Style="{StaticResource MetricLabel}" Text="Clock" />
+                            <TextBlock x:Name="RamClock" Style="{StaticResource Metric}" Text="--" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Style="{StaticResource MetricLabel}" Text="Temp" />
+                            <TextBlock x:Name="RamTemp" Style="{StaticResource Metric}" Text="--" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </DockPanel>
+</Window>

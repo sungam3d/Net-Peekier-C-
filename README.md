@@ -44,3 +44,24 @@ machine.
 
 The split keeps the Core layer testable on any machine and lets you swap GUIs
 (WPF → Avalonia for the AOT path, say) without disturbing the engine.
+
+## Optional: hardware temperatures
+
+The System Stats window (View → Statistics) shows CPU/GPU/RAM load and clock
+out of the box. Temperatures and GPU load/clock need a sensor library:
+
+1. Download `LibreHardwareMonitorLib.dll` (from the LibreHardwareMonitor
+   project or its NuGet package).
+2. Drop it next to `NetPeekier.exe`.
+3. Restart Net-Peekier (elevated — sensors need admin).
+
+If the dll isn't present, those fields just show `--`; everything else works.
+The dll is loaded by reflection, so it's a pure drop-in with no rebuild.
+
+## Optional: per-process byte rates (ETW)
+
+Per-process upload/download numbers come from an ETW kernel session, which
+needs administrator privileges. Run elevated and the Up/Down columns populate
+and the status bar reads `backend: ETW Kernel-Network`. Without elevation the
+app still runs, showing the connection table and system-wide totals, with the
+status bar noting per-process speeds are unavailable.

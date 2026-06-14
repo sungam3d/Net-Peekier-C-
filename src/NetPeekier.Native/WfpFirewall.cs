@@ -70,17 +70,7 @@ public sealed class WfpFirewall : IDisposable
     // Validation (mirrors firewall._valid_exe).
     // ===================================================================
 
-    public static bool ValidExe(string? exePath)
-    {
-        if (string.IsNullOrWhiteSpace(exePath)) return false;
-        var p = exePath.Trim().Trim('"').Trim();
-        if (p.Length < 4) return false;
-        if (p.IndexOfAny(new[] { '*', '?', '"', '\n', '\r', '\t', '|', '&', ';' }) >= 0)
-            return false;
-        if (p.Length <= 3 || p[1] != ':' || p[2] != '\\') return false;
-        if (!p.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) return false;
-        return true;
-    }
+    public static bool ValidExe(string? exePath) => NetPeekier.Core.ExeValidation.ValidExe(exePath);
 
     // ===================================================================
     // Per-app block.

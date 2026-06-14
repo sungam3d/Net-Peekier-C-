@@ -18,7 +18,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NetPeekier.Core\NetPeekier.Core.csproj" />
-    <ProjectReference Include="..\..\src\NetPeekier.Native\NetPeekier.Native.csproj" />
   </ItemGroup>
 
 </Project>

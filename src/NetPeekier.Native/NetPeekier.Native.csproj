@@ -29,6 +29,11 @@
   -->
   <ItemGroup>
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.16" />
+    <!-- SystemStats.cs uses PerformanceCounter (CPU/RAM) and the registry
+         (CPU clock). On a plain net8.0 TFM these live in NuGet packages
+         rather than the shared framework. -->
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
   </ItemGroup>
 
 </Project>

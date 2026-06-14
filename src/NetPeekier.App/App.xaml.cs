@@ -30,6 +30,7 @@ public partial class App : Application
     }
 
     public NetworkMonitor NetworkMonitor { get; }
+    public SystemMonitor SystemMonitor { get; } = new(intervalSeconds: 2.0);
 
     // Per-exe prompt suppression: once we've shown the dialog for an exe,
     // don't show it again until the monitor reports the same exe again
@@ -96,6 +97,10 @@ public partial class App : Application
             Diag.Log("Calling NetworkMonitor.Start()");
             NetworkMonitor.Start();
             Diag.Log("NetworkMonitor.Start() returned");
+
+            Diag.Log("Calling SystemMonitor.Start()");
+            try { SystemMonitor.Start(); Diag.Log("SystemMonitor.Start() returned"); }
+            catch (Exception ex) { Diag.LogException("SystemMonitor.Start", ex); }
         }
         catch (Exception ex)
         {
@@ -120,6 +125,7 @@ public partial class App : Application
         Diag.Log("OnExit entered");
         try { NetworkMonitor?.Stop();    } catch (Exception ex) { Diag.LogException("OnExit / Stop", ex); }
         try { NetworkMonitor?.Dispose(); } catch (Exception ex) { Diag.LogException("OnExit / Dispose", ex); }
+        try { SystemMonitor?.Stop();     } catch (Exception ex) { Diag.LogException("OnExit / SysStop", ex); }
         base.OnExit(e);
         Diag.Log("OnExit completed");
     }
