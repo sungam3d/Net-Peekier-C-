@@ -1,0 +1,38 @@
+<Window x:Class="NetPeekier.App.Views.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About Net-Peekier"
+        Width="460" Height="340"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+
+    <DockPanel Margin="20">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                    HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Close" Width="80" IsCancel="True"
+                    IsDefault="True" Click="OnClose" />
+        </StackPanel>
+
+        <StackPanel>
+            <TextBlock FontSize="22" FontWeight="Bold" Text="Net-Peekier" />
+            <TextBlock x:Name="VersionText" Foreground="#666" Margin="0,2,0,12" />
+
+            <TextBlock TextWrapping="Wrap">
+                Per-process network monitor and firewall for Windows.
+                Originally written in Python; ported to C# / .NET 8.
+            </TextBlock>
+
+            <TextBlock TextWrapping="Wrap" Margin="0,10,0,0">
+                Uses the Windows Filtering Platform (<Run FontFamily="Consolas">fwpuclnt.dll</Run>)
+                for blocking and the IP Helper API
+                (<Run FontFamily="Consolas">iphlpapi.dll</Run>) plus ETW for the connection
+                list — no third-party kernel drivers.
+            </TextBlock>
+
+            <TextBlock TextWrapping="Wrap" Margin="0,10,0,0" Foreground="#666">
+                Requires administrator privileges to install firewall rules.
+            </TextBlock>
+        </StackPanel>
+    </DockPanel>
+</Window>

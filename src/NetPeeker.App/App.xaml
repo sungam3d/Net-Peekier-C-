@@ -1,8 +1,0 @@
-<Application x:Class="NetPeeker.App.App"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             StartupUri="Views/MainWindow.xaml">
-    <Application.Resources>
-        <!-- Phase 4: dashboard styles, tree grid template, table stripes. -->
-    </Application.Resources>
-</Application>

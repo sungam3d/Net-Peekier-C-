@@ -1,0 +1,36 @@
+<Window x:Class="NetPeekier.App.Views.ConnectionsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Connections"
+        Width="780" Height="500" MinWidth="600" MinHeight="320">
+
+    <DockPanel>
+        <TextBlock x:Name="Header" DockPanel.Dock="Top" Margin="8" FontWeight="Bold" />
+
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem><TextBlock x:Name="StatusLine" Text="" /></StatusBarItem>
+        </StatusBar>
+
+        <DataGrid x:Name="ConnGrid"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  IsReadOnly="True"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  AlternationCount="2"
+                  RowBackground="White"
+                  AlternatingRowBackground="#F5F7FA">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Proto"      Binding="{Binding Protocol}"        Width="60"  />
+                <DataGridTextColumn Header="Dir"        Binding="{Binding DirectionArrow}"  Width="50"  />
+                <DataGridTextColumn Header="Local IP"   Binding="{Binding LocalIp}"         Width="130" />
+                <DataGridTextColumn Header="Lport"      Binding="{Binding LocalPort}"       Width="60"  />
+                <DataGridTextColumn Header="Remote IP"  Binding="{Binding RemoteIp}"        Width="160" />
+                <DataGridTextColumn Header="Rport"      Binding="{Binding RemotePort}"      Width="60"  />
+                <DataGridTextColumn Header="Status"     Binding="{Binding Status}"          Width="100" />
+                <DataGridTextColumn Header="↑ Bps"      Binding="{Binding UpBps}"           Width="80"  />
+                <DataGridTextColumn Header="↓ Bps"      Binding="{Binding DownBps}"         Width="80"  />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

@@ -1,0 +1,122 @@
+<Window x:Class="NetPeekier.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:NetPeekier.App.ViewModels"
+        Title="Net-Peekier — per-process network monitor"
+        Width="980" Height="620" MinWidth="780" MinHeight="460"
+        d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        mc:Ignorable="d"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+
+    <Window.Resources>
+        <!-- A discreet visual treatment for blocked / WAN cells. -->
+        <Style x:Key="DashLabel" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="#444" />
+        </Style>
+        <Style x:Key="DashValue" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Consolas" />
+        </Style>
+    </Window.Resources>
+
+    <DockPanel LastChildFill="True">
+
+        <!-- Menu -->
+        <Menu DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Settings…" Click="OnOpenSettings" />
+                <Separator />
+                <MenuItem Header="E_xit" Click="OnExit" />
+            </MenuItem>
+            <MenuItem Header="_Firewall">
+                <MenuItem Header="_Manage firewall…"     Click="OnOpenFirewall" />
+                <Separator />
+                <MenuItem Header="_Block selected app"   Command="{Binding BlockSelectedCommand}" />
+                <MenuItem Header="_Unblock selected app" Command="{Binding UnblockSelectedCommand}" />
+                <Separator />
+                <MenuItem Header="Firewall _enabled"
+                          IsCheckable="True"
+                          IsChecked="{Binding FirewallEnabled, Mode=TwoWay}" />
+                <Separator />
+                <MenuItem Header="Remove _all Net-Peekier rules…"
+                          Command="{Binding RemoveAllRulesCommand}" />
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="_Statistics…" IsEnabled="False" />
+                <MenuItem Header="C_onnections…" Click="OnOpenConnections" />
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_About…" Click="OnAbout" />
+            </MenuItem>
+        </Menu>
+
+        <!-- Status bar -->
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem><TextBlock Text="{Binding Status}" /></StatusBarItem>
+        </StatusBar>
+
+        <!-- Dashboard -->
+        <Grid DockPanel.Dock="Top" Margin="8" Height="86">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Grid.Column="0" BorderBrush="#bbb" BorderThickness="1" Padding="10" Margin="2"
+                    Background="#FAFAFA">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource DashLabel}" Text="UPLOAD ↑" />
+                    <TextBlock Style="{StaticResource DashValue}" Text="{Binding UpNow}" />
+                    <TextBlock Style="{StaticResource DashValue}" Text="{Binding UpPeak}" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="1" BorderBrush="#bbb" BorderThickness="1" Padding="10" Margin="2"
+                    Background="#FAFAFA">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource DashLabel}" Text="DOWNLOAD ↓" />
+                    <TextBlock Style="{StaticResource DashValue}" Text="{Binding DownNow}" />
+                    <TextBlock Style="{StaticResource DashValue}" Text="{Binding DownPeak}" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Column="2" BorderBrush="#bbb" BorderThickness="1" Padding="10" Margin="2"
+                    Background="#FAFAFA">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource DashLabel}" Text="SESSION" />
+                    <TextBlock Style="{StaticResource DashValue}" Text="{Binding SessionTotal}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- App list -->
+        <DataGrid x:Name="AppGrid"
+                  ItemsSource="{Binding Processes}"
+                  SelectedItem="{Binding Selected, Mode=TwoWay}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  IsReadOnly="True"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="Horizontal"
+                  AlternationCount="2"
+                  RowBackground="White"
+                  AlternatingRowBackground="#F5F7FA"
+                  SelectionMode="Single"
+                  MouseDoubleClick="OnRowDoubleClick">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Process"         Binding="{Binding Name}"        Width="180" />
+                <DataGridTextColumn Header="PID"             Binding="{Binding Pid}"         Width="60"  />
+                <DataGridTextColumn Header="↑ Upload"        Binding="{Binding Up}"          Width="100" />
+                <DataGridTextColumn Header="↓ Download"      Binding="{Binding Down}"        Width="100" />
+                <DataGridTextColumn Header="Total"           Binding="{Binding Total}"       Width="100" />
+                <DataGridTextColumn Header="Listening Ports" Binding="{Binding Listening}"   Width="160" />
+                <DataGridTextColumn Header="Tag"             Binding="{Binding Tag}"         Width="80"  />
+                <DataGridCheckBoxColumn Header="Blocked"     Binding="{Binding Blocked}"     Width="60"  />
+                <DataGridCheckBoxColumn Header="WAN"         Binding="{Binding UsesWan}"     Width="50"  />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

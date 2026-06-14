@@ -1,0 +1,48 @@
+<Window x:Class="NetPeekier.App.Views.LockdownDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Net-Peekier — Lockdown alert"
+        Width="500" Height="280"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="True"
+        Topmost="True">
+
+    <DockPanel Margin="16">
+        <TextBlock DockPanel.Dock="Top" FontSize="14" FontWeight="Bold"
+                   Text="An app wants to use the internet" Margin="0,0,0,12" />
+
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="80" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="24" />
+                <RowDefinition Height="*"  />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Grid.Column="0" FontWeight="Bold" Text="Process:" />
+            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="NameLabel"
+                       FontFamily="Consolas" />
+
+            <TextBlock Grid.Row="1" Grid.Column="0" FontWeight="Bold" Text="Path:"
+                       VerticalAlignment="Top" />
+            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="ExeLabel"
+                       FontFamily="Consolas" TextWrapping="Wrap" />
+        </Grid>
+
+        <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="#666"
+                   Text="It's already blocked. Choose what to do — your choice persists across runs (except 'Temp allow', which expires)." />
+
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                    HorizontalAlignment="Right" Margin="0,16,0,0">
+            <Button Content="Block permanently" Width="130" Margin="0,0,8,0"
+                    Click="OnBlock" />
+            <Button Content="Temp allow"        Width="100" Margin="0,0,8,0"
+                    Click="OnTemp" />
+            <Button Content="Allow permanently" Width="130"
+                    Click="OnAllow" />
+        </StackPanel>
+    </DockPanel>
+</Window>
