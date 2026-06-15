@@ -98,6 +98,50 @@ public sealed class MainViewModel : ObservableObject
     private string _status = "starting up…";
     public string Status { get => _status; private set => SetField(ref _status, value); }
 
+    // ---- column sorting -------------------------------------------------
+    private string _sortKey = "Down";   // default: downloads, descending
+    private SortDir _sortDir = SortDir.Desc;
+
+    public string SortHeaderProgram   => Head("Program",        "Display");
+    public string SortHeaderUpload    => Head("Upload",         "Up");
+    public string SortHeaderDownload  => Head("Download",       "Down");
+    public string SortHeaderTotalUp   => Head("Total Up",       "TotalUp");
+    public string SortHeaderTotalDown => Head("Total Down",     "TotalDown");
+    public string SortHeaderTag       => Head("Tag",            "Tag");
+    public string SortHeaderListening => Head("Active Ports","Listening");
+
+    private string Head(string label, string key)
+    {
+        if (_sortKey != key) return label;
+        return _sortDir == SortDir.Asc ? label + "  ▲" : label + "  ▼";
+    }
+
+    /// <summary>Toggle/strengthen the sort on a column key (from header click).</summary>
+    public void SortBy(string key)
+    {
+        if (_sortKey == key)
+            _sortDir = _sortDir == SortDir.Asc ? SortDir.Desc : SortDir.Asc;
+        else
+        {
+            _sortKey = key;
+            // Text columns default ascending; numeric default descending.
+            _sortDir = (key is "Display" or "Tag" or "Listening") ? SortDir.Asc : SortDir.Desc;
+        }
+        RaiseSortHeaders();
+        SafeRefresh();
+    }
+
+    private void RaiseSortHeaders()
+    {
+        OnPropertyChanged(nameof(SortHeaderProgram));
+        OnPropertyChanged(nameof(SortHeaderUpload));
+        OnPropertyChanged(nameof(SortHeaderDownload));
+        OnPropertyChanged(nameof(SortHeaderTotalUp));
+        OnPropertyChanged(nameof(SortHeaderTotalDown));
+        OnPropertyChanged(nameof(SortHeaderTag));
+        OnPropertyChanged(nameof(SortHeaderListening));
+    }
+
     // ---- LAN/WAN view filters (persist to settings) ---------------------
     public bool ShowLan
     {
@@ -277,7 +321,7 @@ public sealed class MainViewModel : ObservableObject
             return;
         }
         var current = _monitor.Settings.ExeTags.TryGetValue(exe, out var t) ? t : "";
-        var ans = Views.TagPromptDialog.Ask(owner, current);
+        var ans = Views.TagPromptDialog.Ask(owner, current, _monitor.Settings.AllTags());
         if (ans is null) return;   // cancelled
 
         ans = ans.Trim();
@@ -484,6 +528,60 @@ public sealed class MainViewModel : ObservableObject
                 _groupByName.Remove(g.Name);
                 Groups.RemoveAt(i);
             }
+        }
+
+        SortGroups();
+    }
+
+    /// <summary>
+    /// Reorder Groups (and each group's Children) in place to match the
+    /// current sort column/direction. Done by moving items within the
+    /// existing ObservableCollections so the tree's expand state and
+    /// selection are preserved.
+    /// </summary>
+    private void SortGroups()
+    {
+        Comparison<IProcessNode> cmp = MakeComparer();
+
+        ReorderInPlace(Groups, cmp);
+        foreach (var g in Groups)
+            ReorderInPlace(g.Children, cmp);
+    }
+
+    private Comparison<IProcessNode> MakeComparer()
+    {
+        int dir = _sortDir == SortDir.Asc ? 1 : -1;
+        // For numeric columns we sort on the underlying number, not the
+        // human-formatted string, so "9 B" < "1 KB" orders correctly.
+        return (a, b) =>
+        {
+            int c = _sortKey switch
+            {
+                "Display"   => string.Compare(Disp(a), Disp(b), StringComparison.OrdinalIgnoreCase),
+                "Tag"       => string.Compare(a.Tag, b.Tag, StringComparison.OrdinalIgnoreCase),
+                "Listening" => string.Compare(a.Listening, b.Listening, StringComparison.OrdinalIgnoreCase),
+                "Up"        => Num(a, n => n.SortUp).CompareTo(Num(b, n => n.SortUp)),
+                "Down"      => Num(a, n => n.SortDown).CompareTo(Num(b, n => n.SortDown)),
+                "TotalUp"   => Num(a, n => n.SortTotalUp).CompareTo(Num(b, n => n.SortTotalUp)),
+                "TotalDown" => Num(a, n => n.SortTotalDown).CompareTo(Num(b, n => n.SortTotalDown)),
+                _           => 0,
+            };
+            if (c == 0) c = string.Compare(Disp(a), Disp(b), StringComparison.OrdinalIgnoreCase);
+            return c * dir;
+        };
+
+        static string Disp(IProcessNode n) => n.Display ?? "";
+        static double Num(IProcessNode n, Func<IProcessNode, double> sel) => sel(n);
+    }
+
+    private static void ReorderInPlace<T>(ObservableCollection<T> col, Comparison<T> cmp)
+    {
+        var sorted = col.ToList();
+        sorted.Sort(cmp);
+        for (int target = 0; target < sorted.Count; target++)
+        {
+            int cur = col.IndexOf(sorted[target]);
+            if (cur != target) col.Move(cur, target);
         }
     }
 

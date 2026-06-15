@@ -63,6 +63,40 @@
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Margin" Value="8,0,0,0" />
         </Style>
+
+        <!-- Clickable column header: flat button that sorts on click. -->
+        <Style x:Key="HeaderButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Padding" Value="4,3" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#dbe2ea" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Column-resize grip between headers. Resizes the shared-size column. -->
+        <Style x:Key="ColSplitter" TargetType="GridSplitter">
+            <Setter Property="Width" Value="5" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="Background" Value="#b8c1cc" />
+            <Setter Property="ResizeBehavior" Value="PreviousAndNext" />
+            <Setter Property="ShowsPreview" Value="True" />
+        </Style>
     </Window.Resources>
 
     <DockPanel LastChildFill="True">
@@ -234,23 +268,40 @@
             <DockPanel>
                 <Border DockPanel.Dock="Top" Background="#c8d0da"
                         BorderBrush="#a9b4c0" BorderThickness="0,0,0,1">
-                    <Grid Margin="24,3,18,3">
+                    <!-- Header strip. Columns use SharedSizeGroup so the rows
+                         below line up automatically. GridSplitters sit on the
+                         right edge of each header cell to resize; header text
+                         is a button that toggles sort. -->
+                    <Grid x:Name="HeaderGrid" Margin="24,0,18,0" Grid.IsSharedSizeScope="False">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="185" />
-                            <ColumnDefinition Width="78"  />
-                            <ColumnDefinition Width="78"  />
-                            <ColumnDefinition Width="85"  />
-                            <ColumnDefinition Width="85"  />
-                            <ColumnDefinition Width="80"  />
-                            <ColumnDefinition Width="*"   />
+                            <ColumnDefinition SharedSizeGroup="C0" Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition SharedSizeGroup="C1" Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition SharedSizeGroup="C2" Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition SharedSizeGroup="C3" Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition SharedSizeGroup="C4" Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition SharedSizeGroup="C5" Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition SharedSizeGroup="C6" Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Program"        FontWeight="Bold" />
-                        <TextBlock Grid.Column="1" Text="Upload"         FontWeight="Bold" HorizontalAlignment="Right" />
-                        <TextBlock Grid.Column="2" Text="Download"       FontWeight="Bold" HorizontalAlignment="Right" />
-                        <TextBlock Grid.Column="3" Text="Total Up"       FontWeight="Bold" HorizontalAlignment="Right" />
-                        <TextBlock Grid.Column="4" Text="Total Down"     FontWeight="Bold" HorizontalAlignment="Right" />
-                        <TextBlock Grid.Column="5" Text="Tag"            FontWeight="Bold" />
-                        <TextBlock Grid.Column="6" Text="Listening Ports" FontWeight="Bold" />
+
+                        <Button Grid.Column="0"  Tag="Display"   Click="OnSortColumn" Content="{Binding SortHeaderProgram}"   Style="{StaticResource HeaderButton}" HorizontalContentAlignment="Center" />
+                        <GridSplitter Grid.Column="1"  Style="{StaticResource ColSplitter}" />
+                        <Button Grid.Column="2"  Tag="Up"        Click="OnSortColumn" Content="{Binding SortHeaderUpload}"    Style="{StaticResource HeaderButton}" HorizontalContentAlignment="Center" />
+                        <GridSplitter Grid.Column="3"  Style="{StaticResource ColSplitter}" />
+                        <Button Grid.Column="4"  Tag="Down"      Click="OnSortColumn" Content="{Binding SortHeaderDownload}"  Style="{StaticResource HeaderButton}" HorizontalContentAlignment="Center" />
+                        <GridSplitter Grid.Column="5"  Style="{StaticResource ColSplitter}" />
+                        <Button Grid.Column="6"  Tag="TotalUp"   Click="OnSortColumn" Content="{Binding SortHeaderTotalUp}"  Style="{StaticResource HeaderButton}" HorizontalContentAlignment="Center" />
+                        <GridSplitter Grid.Column="7"  Style="{StaticResource ColSplitter}" />
+                        <Button Grid.Column="8"  Tag="TotalDown" Click="OnSortColumn" Content="{Binding SortHeaderTotalDown}" Style="{StaticResource HeaderButton}" HorizontalContentAlignment="Center" />
+                        <GridSplitter Grid.Column="9"  Style="{StaticResource ColSplitter}" />
+                        <Button Grid.Column="10" Tag="Tag"       Click="OnSortColumn" Content="{Binding SortHeaderTag}"       Style="{StaticResource HeaderButton}" HorizontalContentAlignment="Center" />
+                        <GridSplitter Grid.Column="11" Style="{StaticResource ColSplitter}" />
+                        <Button Grid.Column="12" Tag="Listening" Click="OnSortColumn" Content="{Binding SortHeaderListening}" Style="{StaticResource HeaderButton}" HorizontalContentAlignment="Center" />
                     </Grid>
                 </Border>
 
@@ -260,6 +311,7 @@
                           MouseDoubleClick="OnRowDoubleClick"
                           BorderThickness="1" BorderBrush="#a9b4c0"
                           FontFamily="Segoe UI" FontSize="12"
+                          Grid.IsSharedSizeScope="True"
                           VirtualizingStackPanel.IsVirtualizing="True"
                           VirtualizingStackPanel.VirtualizationMode="Recycling">
 
@@ -282,30 +334,39 @@
                     </TreeView.ContextMenu>
 
                     <TreeView.Resources>
-                        <Style x:Key="Cell" TargetType="TextBlock">
+                        <!-- Shared column definitions reused by both templates
+                             so leaf and group rows align with the header. -->
+                        <Style x:Key="CellC" TargetType="TextBlock">
                             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
                             <Setter Property="VerticalAlignment" Value="Center" />
+                            <Setter Property="HorizontalAlignment" Value="Center" />
                         </Style>
 
                         <!-- Leaf (PID) template -->
                         <DataTemplate x:Key="LeafTemplate">
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="185" />
-                                    <ColumnDefinition Width="78"  />
-                                    <ColumnDefinition Width="78"  />
-                                    <ColumnDefinition Width="85"  />
-                                    <ColumnDefinition Width="85"  />
-                                    <ColumnDefinition Width="80"  />
-                                    <ColumnDefinition Width="*"   />
+                                    <ColumnDefinition SharedSizeGroup="C0" />
+                                    <ColumnDefinition Width="5" />
+                                    <ColumnDefinition SharedSizeGroup="C1" />
+                                    <ColumnDefinition Width="5" />
+                                    <ColumnDefinition SharedSizeGroup="C2" />
+                                    <ColumnDefinition Width="5" />
+                                    <ColumnDefinition SharedSizeGroup="C3" />
+                                    <ColumnDefinition Width="5" />
+                                    <ColumnDefinition SharedSizeGroup="C4" />
+                                    <ColumnDefinition Width="5" />
+                                    <ColumnDefinition SharedSizeGroup="C5" />
+                                    <ColumnDefinition Width="5" />
+                                    <ColumnDefinition SharedSizeGroup="C6" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Display}"   Style="{StaticResource Cell}" Foreground="#555" />
-                                <TextBlock Grid.Column="1" Text="{Binding Up}"        Style="{StaticResource Cell}" FontFamily="Consolas" HorizontalAlignment="Right" />
-                                <TextBlock Grid.Column="2" Text="{Binding Down}"      Style="{StaticResource Cell}" FontFamily="Consolas" HorizontalAlignment="Right" />
-                                <TextBlock Grid.Column="3" Text="{Binding TotalUp}"   Style="{StaticResource Cell}" FontFamily="Consolas" HorizontalAlignment="Right" />
-                                <TextBlock Grid.Column="4" Text="{Binding TotalDown}" Style="{StaticResource Cell}" FontFamily="Consolas" HorizontalAlignment="Right" />
-                                <TextBlock Grid.Column="5" Text="{Binding Tag}"       Style="{StaticResource Cell}" />
-                                <TextBlock Grid.Column="6" Text="{Binding Listening}" Style="{StaticResource Cell}" />
+                                <TextBlock Grid.Column="0"  Text="{Binding Display}"   Style="{StaticResource CellC}" HorizontalAlignment="Left" Foreground="#555" />
+                                <TextBlock Grid.Column="2"  Text="{Binding Up}"        Style="{StaticResource CellC}" FontFamily="Consolas" />
+                                <TextBlock Grid.Column="4"  Text="{Binding Down}"      Style="{StaticResource CellC}" FontFamily="Consolas" />
+                                <TextBlock Grid.Column="6"  Text="{Binding TotalUp}"   Style="{StaticResource CellC}" FontFamily="Consolas" />
+                                <TextBlock Grid.Column="8"  Text="{Binding TotalDown}" Style="{StaticResource CellC}" FontFamily="Consolas" />
+                                <TextBlock Grid.Column="10" Text="{Binding Tag}"       Style="{StaticResource CellC}" />
+                                <TextBlock Grid.Column="12" Text="{Binding Listening}" Style="{StaticResource CellC}" />
                             </Grid>
                         </DataTemplate>
                     </TreeView.Resources>
@@ -315,22 +376,27 @@
                                                   ItemTemplate="{StaticResource LeafTemplate}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="185" />
-                                    <ColumnDefinition Width="78"  />
-                                    <ColumnDefinition Width="78"  />
-                                    <ColumnDefinition Width="85"  />
-                                    <ColumnDefinition Width="85"  />
-                                    <ColumnDefinition Width="80"  />
-                                    <ColumnDefinition Width="*"   />
+                                    <ColumnDefinition SharedSizeGroup="C0" />
+                                    <ColumnDefinition Width="5" />
+                                    <ColumnDefinition SharedSizeGroup="C1" />
+                                    <ColumnDefinition Width="5" />
+                                    <ColumnDefinition SharedSizeGroup="C2" />
+                                    <ColumnDefinition Width="5" />
+                                    <ColumnDefinition SharedSizeGroup="C3" />
+                                    <ColumnDefinition Width="5" />
+                                    <ColumnDefinition SharedSizeGroup="C4" />
+                                    <ColumnDefinition Width="5" />
+                                    <ColumnDefinition SharedSizeGroup="C5" />
+                                    <ColumnDefinition Width="5" />
+                                    <ColumnDefinition SharedSizeGroup="C6" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Display}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                           Foreground="{Binding RowColor}" />
-                                <TextBlock Grid.Column="1" Text="{Binding Up}"        FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" />
-                                <TextBlock Grid.Column="2" Text="{Binding Down}"      FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" />
-                                <TextBlock Grid.Column="3" Text="{Binding TotalUp}"   FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" />
-                                <TextBlock Grid.Column="4" Text="{Binding TotalDown}" FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Right" />
-                                <TextBlock Grid.Column="5" Text="{Binding Tag}"       VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="6" Text="{Binding Listening}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="0"  Text="{Binding Display}" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Left" TextTrimming="CharacterEllipsis" Foreground="{Binding RowColor}" />
+                                <TextBlock Grid.Column="2"  Text="{Binding Up}"        FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                <TextBlock Grid.Column="4"  Text="{Binding Down}"      FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                <TextBlock Grid.Column="6"  Text="{Binding TotalUp}"   FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                <TextBlock Grid.Column="8"  Text="{Binding TotalDown}" FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                <TextBlock Grid.Column="10" Text="{Binding Tag}"       VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                <TextBlock Grid.Column="12" Text="{Binding Listening}" VerticalAlignment="Center" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
                             </Grid>
                         </HierarchicalDataTemplate>
                     </TreeView.ItemTemplate>

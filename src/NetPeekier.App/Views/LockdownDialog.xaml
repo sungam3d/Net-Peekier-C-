@@ -33,16 +33,14 @@
         </Grid>
 
         <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="#666"
-                   Text="It's already blocked. Choose what to do — your choice persists across runs (except 'Temp allow', which expires)." />
+                   Text="It's blocked for now. Choose what to do — permanent choices persist across runs; 'Temp allow' expires after a while and 'Disallow' lasts until the app is re-evaluated." />
 
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
                     HorizontalAlignment="Right" Margin="0,16,0,0">
-            <Button Content="Block permanently" Width="130" Margin="0,0,8,0"
-                    Click="OnBlock" />
-            <Button Content="Temp allow"        Width="100" Margin="0,0,8,0"
-                    Click="OnTemp" />
-            <Button Content="Allow permanently" Width="130"
-                    Click="OnAllow" />
+            <Button Content="Temp allow"        Width="100" Margin="0,0,8,0" Click="OnTemp" />
+            <Button Content="Allow permanently" Width="130" Margin="0,0,8,0" Click="OnAllow" />
+            <Button Content="Disallow"          Width="90"  Margin="0,0,8,0" Click="OnDisallow" />
+            <Button Content="Block permanently" Width="130" Click="OnBlock" />
         </StackPanel>
     </DockPanel>
 </Window>

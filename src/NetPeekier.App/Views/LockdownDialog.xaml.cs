@@ -30,6 +30,15 @@ public partial class LockdownDialog : Window
         Close();
     }
 
+    private void OnDisallow(object sender, RoutedEventArgs e)
+    {
+        // Keep it blocked for this session (the lockdown sweep already
+        // blocked it); don't make it permanent. It'll be re-prompted if the
+        // process restarts.
+        _monitor.LockdownBlock(_exe, permanent: false);
+        Close();
+    }
+
     private void OnTemp(object sender, RoutedEventArgs e)
     {
         _monitor.AllowTemporarily(_exe, _monitor.Settings.AllowMinutes);

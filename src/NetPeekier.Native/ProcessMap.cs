@@ -225,8 +225,15 @@ public sealed class ProcessMap
         return byPid;
     }
 
-    public IReadOnlyList<int> ListeningPorts(IEnumerable<Connection> conns) =>
-        conns.Where(c => c.Status == "LISTEN" && c.LocalPort != 0)
+    /// <summary>
+    /// All local ports the process is currently using — every connection's
+    /// local port (any state), plus UDP binds. Unlike the old "listening
+    /// ports", this includes the ephemeral local ports of outbound client
+    /// connections, so client apps show ports too. Port 0 (no local port) is
+    /// skipped.
+    /// </summary>
+    public IReadOnlyList<int> ActivePorts(IEnumerable<Connection> conns) =>
+        conns.Where(c => c.LocalPort != 0)
              .Select(c => c.LocalPort)
              .Distinct()
              .OrderBy(p => p)

@@ -89,16 +89,38 @@ public partial class ConnectionsWindow : Window
 
     private void Refresh()
     {
-        var (procs, _) = _monitor.Snapshot();
-        var p = procs.FirstOrDefault(x => x.Pid == _pid);
-        if (p is null)
+        // Pull this PID's connections straight from the connection table
+        // rather than the display-filtered snapshot — the main list hides
+        // idle/listener-only processes, but the detail window should always
+        // show whatever sockets the process currently has.
+        List<NetPeekier.Core.Connection> conns;
+        try
         {
-            StatusLine.Text = "Process has exited.";
+            var byPid = _monitor.ProcessMap.SnapshotConnectionsByPid();
+            conns = byPid.TryGetValue(_pid, out var list) ? list : new();
+        }
+        catch
+        {
+            conns = new();
+        }
+
+        if (conns.Count == 0 && !PidAlive())
+        {
+            StatusLine.Text = "Process has exited or has no current connections.";
             ConnGrid.ItemsSource = null;
             return;
         }
-        ConnGrid.ItemsSource = p.Connections.ToList();
-        StatusLine.Text = $"{p.Connections.Count} connection(s)  —  double-click to see this process's packets";
+
+        ConnGrid.ItemsSource = conns;
+        StatusLine.Text = conns.Count == 0
+            ? "No active connections right now — double-click anywhere to open this process's packet feed."
+            : $"{conns.Count} connection(s) — double-click a row to open this process's packet feed.";
+    }
+
+    private bool PidAlive()
+    {
+        try { using var _ = System.Diagnostics.Process.GetProcessById(_pid); return true; }
+        catch { return false; }
     }
 
     private void OnConnectionDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)

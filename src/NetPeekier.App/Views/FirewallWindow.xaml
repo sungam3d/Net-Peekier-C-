@@ -51,6 +51,20 @@
                 </DockPanel>
             </TabItem>
 
+            <TabItem Header="Allowed apps">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Margin="0,4,0,8" Foreground="#666"
+                               TextWrapping="Wrap"
+                               Text="In Lockdown mode these apps are permanently allowed to use the internet without prompting. Remove an app to make Lockdown ask again next time it connects." />
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="Remove from allow-list" Click="OnRemoveAllowed" Width="160" />
+                    </StackPanel>
+                    <ListBox x:Name="AllowedList"
+                             FontFamily="Consolas"
+                             SelectionMode="Single" />
+                </DockPanel>
+            </TabItem>
+
             <TabItem Header="IP rules">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Margin="0,4,0,8" Foreground="#666"
@@ -71,6 +85,35 @@
                             <DataGridTextColumn Header="Ports"     Binding="{Binding Ports}"     Width="120" />
                             <DataGridTextColumn Header="Proto"     Binding="{Binding Protocol}"  Width="60"  />
                             <DataGridTextColumn Header="Note"      Binding="{Binding Note}"      Width="*"   />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="Tag rules">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Margin="0,4,0,8" Foreground="#666"
+                               TextWrapping="Wrap"
+                               Text="Tags group apps together. A blocked tag blocks every app that carries it; an allowed tag whitelists them in Lockdown. Assign tags from the main window's right-click menu." />
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="Block tag"   Click="OnBlockTag"   Width="90" Margin="0,0,8,0" />
+                        <Button Content="Unblock tag" Click="OnUnblockTag" Width="90" Margin="0,0,8,0" />
+                        <Button Content="Allow tag"   Click="OnAllowTag"   Width="90" Margin="0,0,8,0" />
+                        <Button Content="Unallow tag" Click="OnUnallowTag" Width="90" />
+                    </StackPanel>
+                    <DataGrid x:Name="TagGrid"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              IsReadOnly="True"
+                              HeadersVisibility="Column"
+                              GridLinesVisibility="Horizontal"
+                              SelectionMode="Single">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Tag"      Binding="{Binding Tag}"     Width="200" />
+                            <DataGridTextColumn Header="Apps"     Binding="{Binding Count}"   Width="70"  />
+                            <DataGridTextColumn Header="Blocked"  Binding="{Binding Blocked}" Width="80"  />
+                            <DataGridTextColumn Header="Allowed"  Binding="{Binding Allowed}" Width="80"  />
+                            <DataGridTextColumn Header="Members"  Binding="{Binding Members}" Width="*"   />
                         </DataGrid.Columns>
                     </DataGrid>
                 </DockPanel>

@@ -25,6 +25,11 @@ public interface IProcessNode
     bool   Blocked   { get; }
     bool   UsesWan   { get; }
     string RowColor  { get; }   // text tint: blocked = red, active = dark, idle = grey
+    // Raw numeric values for correct column sorting (not the formatted text).
+    double SortUp        { get; }
+    double SortDown      { get; }
+    double SortTotalUp   { get; }
+    double SortTotalDown { get; }
 }
 
 public sealed class ProcessGroup : ObservableObject, IProcessNode
@@ -62,6 +67,11 @@ public sealed class ProcessGroup : ObservableObject, IProcessNode
 
     private string _rowColor = "#222";
     public string RowColor { get => _rowColor; private set => SetField(ref _rowColor, value); }
+
+    public double SortUp        { get; private set; }
+    public double SortDown      { get; private set; }
+    public double SortTotalUp   { get; private set; }
+    public double SortTotalDown { get; private set; }
 
     private bool _isExpanded;
     public bool IsExpanded { get => _isExpanded; set => SetField(ref _isExpanded, value); }
@@ -101,6 +111,7 @@ public sealed class ProcessGroup : ObservableObject, IProcessNode
         Down      = Formatting.HumanSpeed(down, speedUnit);
         TotalUp   = tup > 0 ? Formatting.HumanBytes(tup) : "-";
         TotalDown = tdown > 0 ? Formatting.HumanBytes(tdown) : "-";
+        SortUp = up; SortDown = down; SortTotalUp = tup; SortTotalDown = tdown;
         Listening = Formatting.PortsStr(ports.ToList());
         Tag       = tag;
         Blocked   = blocked;

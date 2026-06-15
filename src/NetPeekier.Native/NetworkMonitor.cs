@@ -72,6 +72,11 @@ public sealed class NetworkMonitor : IDisposable
     private readonly Dictionary<int, HashSet<ConnectionKey>> _prevConns = new();
     private readonly Dictionary<int, (long Up, long Down)>   _prevPidTotals = new();
 
+    // Accumulated set of local ports each pid has used while we've watched it
+    // ("active ports" = is or has ever used). Reset when the pid dies so a
+    // recycled pid doesn't inherit a stale set.
+    private readonly Dictionary<int, SortedSet<int>> _everPorts = new();
+
     /// <summary>
     /// Raised (on the tick thread) when a process becomes idle and should be
     /// dropped from the list. The packet-capture layer subscribes to clear
@@ -533,7 +538,14 @@ public sealed class NetworkMonitor : IDisposable
 
             var exe = ProcessMap.Exe(pid);
             var (upLim, downLim) = !string.IsNullOrEmpty(exe) ? s.ExeLimit(exe) : (0, 0);
-            var listening = ProcessMap.ListeningPorts(conns).ToList();
+
+            // Active ports = every local port this pid uses now, unioned with
+            // those it has used on prior ticks (is or has ever used).
+            if (!_everPorts.TryGetValue(pid, out var everPorts))
+                _everPorts[pid] = everPorts = new SortedSet<int>();
+            foreach (var pt in ProcessMap.ActivePorts(conns))
+                everPorts.Add(pt);
+            var activePorts = everPorts.ToList();
 
             var ps = new ProcStat
             {
@@ -544,7 +556,7 @@ public sealed class NetworkMonitor : IDisposable
                 DownBps   = rate.Down,
                 UpTotal   = tot.Up,
                 DownTotal = tot.Down,
-                ListeningPorts = listening,
+                ListeningPorts = activePorts,
                 Connections    = conns,
                 Blocked        = !string.IsNullOrEmpty(exe) && blockedExes.Contains(exe),
                 UpLimit        = upLim,
@@ -585,6 +597,7 @@ public sealed class NetworkMonitor : IDisposable
                 _lastActive.Remove(pid);
                 _prevConns.Remove(pid);
                 _prevPidTotals.Remove(pid);
+                _everPorts.Remove(pid);
             }
             Backend.ForgetPids(deadPids);
             // Their packet logs go too.
@@ -597,6 +610,7 @@ public sealed class NetworkMonitor : IDisposable
             _lastActive.Remove(pid);
             _prevConns.Remove(pid);
             _prevPidTotals.Remove(pid);
+            _everPorts.Remove(pid);
         }
 
         History.MaybeFlush();

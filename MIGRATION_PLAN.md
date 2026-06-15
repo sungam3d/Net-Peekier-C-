@@ -210,6 +210,49 @@ machine with NuGet access — you'll want `TraceEvent` for Phase 5.
 
 ## Status log (newest first)
 
+- **2026-06-15 — "Listening Ports" → "Active Ports" (broader meaning).**
+  - Renamed the column to "Active Ports" and changed what it shows: every
+    local port the process is using now (any connection state, not just
+    LISTEN), unioned with the ports it has used on earlier ticks while
+    we've been watching it — i.e. "is or has ever used". Client apps now
+    show their ephemeral local ports, not just servers.
+  - ProcessMap.ListeningPorts(conns) → ActivePorts(conns), now returns all
+    local ports (LocalPort != 0) regardless of status. The monitor keeps a
+    per-pid SortedSet (_everPorts) and unions each tick's active ports into
+    it; the set is cleared when the pid dies (so a recycled pid can't
+    inherit stale ports). ProcStat.ListeningPorts (the property) and the
+    "Listening" sort key were left as internal names to avoid a churny
+    rename; only the user-facing label changed. 97/97 Core tests pass.
+
+- **2026-06-15 — UX batch: sortable/resizable columns, tabs, lockdown 4-way, tag combo.**
+  - Main list columns are now click-to-sort (▲/▼ arrows; numeric columns
+    sort on raw bytes, not formatted text), resizable via splitters
+    between the headers (shared-size column groups so rows stay aligned),
+    and the widths persist to Settings.ColumnWidths["main"] on close and
+    restore on open. Cell text centered.
+  - Connections window: was reading the display-filtered snapshot (which
+    hides idle/listener processes) so the target PID often wasn't found →
+    "exited" + no rows. Now reads the connection table directly by PID, so
+    connections always show and double-click opens the packet feed.
+  - Connections window also shows the exe path + file details
+    (description, company, version, size) pulled from the binary.
+  - Set-tag dialog is now an editable ComboBox seeded with existing tags
+    (pick one or type a new name).
+  - Firewall Manager gained two tabs: "Allowed apps" (Lockdown allow-list,
+    remove to re-prompt) and "Tag rules" (block/unblock/allow/unallow a
+    tag, applied via ApplySettings(syncFirewall:true)). Now 4 tabs total:
+    Blocked apps, Allowed apps, IP rules, Tag rules.
+  - Lockdown dialog now has the full 4 options: Temp allow / Allow
+    permanently / Disallow (session block) / Block permanently. The
+    per-exe one-prompt trigger logic was already correct.
+  - Process inclusion tightened: only processes with an active (non-LISTEN)
+    connection or measurable traffic are shown. "Hide idle processes
+    after" works as: 0 = drop instantly when no current traffic, N = drop
+    after N idle minutes (and clear that pid's packet log), blank = never.
+    Reverted the mistaken row-linger repurposing of the packet-purge
+    setting; it's now "Keep packet logs for: N minutes" and purges the
+    capture buffer by age. 97/97 Core tests still pass.
+
 - **2026-06-14 — Fixed: all rows showing "PID n", no stats, fast vanishing.**
   - Root cause of the names: ProcessMap.Name/Exe used
     Process.ProcessName / MainModule, which throw on most services /

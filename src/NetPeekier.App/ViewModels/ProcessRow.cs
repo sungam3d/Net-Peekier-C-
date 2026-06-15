@@ -48,6 +48,11 @@ public sealed class ProcessRow : ObservableObject, IProcessNode
     private string _rowColor = "#555";
     public string RowColor { get => _rowColor; private set => SetField(ref _rowColor, value); }
 
+    public double SortUp        { get; private set; }
+    public double SortDown      { get; private set; }
+    public double SortTotalUp   { get; private set; }
+    public double SortTotalDown { get; private set; }
+
     private int _connectionCount;
     public int ConnectionCount { get => _connectionCount; private set => SetField(ref _connectionCount, value); }
 
@@ -63,6 +68,7 @@ public sealed class ProcessRow : ObservableObject, IProcessNode
         Down            = Formatting.HumanSpeed(p.DownBps, speedUnit);
         TotalUp         = p.UpTotal   > 0 ? Formatting.HumanBytes(p.UpTotal)   : "-";
         TotalDown       = p.DownTotal > 0 ? Formatting.HumanBytes(p.DownTotal) : "-";
+        SortUp = p.UpBps; SortDown = p.DownBps; SortTotalUp = p.UpTotal; SortTotalDown = p.DownTotal;
         Listening       = Formatting.PortsStr(p.ListeningPorts);
         Tag             = p.Tag;
         Blocked         = p.Blocked;

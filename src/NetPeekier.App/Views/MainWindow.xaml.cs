@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using NetPeekier.App.ViewModels;
@@ -21,6 +22,12 @@ public partial class MainWindow : Window
             DataContext = _vm;
             Closed += (_, _) => _vm.Stop();
             WindowGeometryPersistence.Apply(this, "main");
+
+            // Column-width persistence. Restore saved widths on first layout,
+            // save them when the window closes.
+            Loaded  += (_, _) => RestoreColumnWidths();
+            Closing += (_, _) => SaveColumnWidths();
+
             NetPeekier.Core.Diag.Log("MainWindow.ctor: done");
         }
         catch (Exception ex)
@@ -31,6 +38,51 @@ public partial class MainWindow : Window
     }
 
     private void OnExit(object sender, RoutedEventArgs e) => Close();
+
+    // The shared-size column groups are C0..C6; the header grid's odd columns
+    // are the splitters. We persist the data columns' widths by index.
+    private static readonly int[] DataCols = { 0, 2, 4, 6, 8, 10, 12 };
+
+    private void SaveColumnWidths()
+    {
+        try
+        {
+            var s = ((App)System.Windows.Application.Current).NetworkMonitor.Settings;
+            var map = new Dictionary<string, int>();
+            for (int i = 0; i < DataCols.Length; i++)
+            {
+                var cd = HeaderGrid.ColumnDefinitions[DataCols[i]];
+                var w = (int)Math.Round(cd.ActualWidth);
+                if (w > 0) map[$"C{i}"] = w;
+            }
+            if (map.Count > 0)
+            {
+                s.ColumnWidths["main"] = map;
+                s.Save();
+            }
+        }
+        catch (Exception ex) { NetPeekier.Core.Diag.LogException("SaveColumnWidths", ex); }
+    }
+
+    private void RestoreColumnWidths()
+    {
+        try
+        {
+            var s = ((App)System.Windows.Application.Current).NetworkMonitor.Settings;
+            if (!s.ColumnWidths.TryGetValue("main", out var map)) return;
+            for (int i = 0; i < DataCols.Length; i++)
+            {
+                if (map.TryGetValue($"C{i}", out var w) && w > 20)
+                {
+                    // The last column is the star-sized filler; leave it auto.
+                    if (DataCols[i] == 12) continue;
+                    HeaderGrid.ColumnDefinitions[DataCols[i]].Width =
+                        new GridLength(w, GridUnitType.Pixel);
+                }
+            }
+        }
+        catch (Exception ex) { NetPeekier.Core.Diag.LogException("RestoreColumnWidths", ex); }
+    }
 
     private void OnOpenFirewall(object sender, RoutedEventArgs e)
     {
@@ -61,6 +113,12 @@ public partial class MainWindow : Window
         // The TreeView's SelectedItem isn't two-way bindable, so we push the
         // selection into the VM here. It accepts either node kind.
         _vm.Selected = e.NewValue as IProcessNode;
+    }
+
+    private void OnSortColumn(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button b && b.Tag is string key)
+            _vm.SortBy(key);
     }
 
     private void OnOpenConnections(object sender, RoutedEventArgs e)

@@ -32,7 +32,89 @@ public partial class FirewallWindow : Window
             .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        AllowedList.ItemsSource = _monitor.Settings.AllowedExes
+            .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
         RulesGrid.ItemsSource = _monitor.Settings.IpRules.ToList();
+
+        RefreshTags();
+    }
+
+    private void RefreshTags()
+    {
+        var s = _monitor.Settings;
+        var rows = s.AllTags()
+            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
+            .Select(tag =>
+            {
+                var members = s.ExesWithTag(tag).ToList();
+                return new TagRow
+                {
+                    Tag     = tag,
+                    Count   = members.Count,
+                    Blocked = s.TagBlocked.Contains(tag) ? "yes" : "",
+                    Allowed = s.TagAllowed.Contains(tag) ? "yes" : "",
+                    Members = string.Join(", ", members.Select(System.IO.Path.GetFileName)),
+                };
+            })
+            .ToList();
+        TagGrid.ItemsSource = rows;
+    }
+
+    private sealed class TagRow
+    {
+        public string Tag { get; init; } = "";
+        public int    Count { get; init; }
+        public string Blocked { get; init; } = "";
+        public string Allowed { get; init; } = "";
+        public string Members { get; init; } = "";
+    }
+
+    private string? SelectedTag => (TagGrid.SelectedItem as TagRow)?.Tag;
+
+    private void OnBlockTag(object sender, RoutedEventArgs e)
+    {
+        if (SelectedTag is not { } tag) return;
+        if (!_monitor.Settings.TagBlocked.Contains(tag)) _monitor.Settings.TagBlocked.Add(tag);
+        _monitor.Settings.Save();
+        _monitor.ApplySettings(syncFirewall: true);
+        Refresh();
+    }
+
+    private void OnUnblockTag(object sender, RoutedEventArgs e)
+    {
+        if (SelectedTag is not { } tag) return;
+        _monitor.Settings.TagBlocked.Remove(tag);
+        _monitor.Settings.Save();
+        _monitor.ApplySettings(syncFirewall: true);
+        Refresh();
+    }
+
+    private void OnAllowTag(object sender, RoutedEventArgs e)
+    {
+        if (SelectedTag is not { } tag) return;
+        if (!_monitor.Settings.TagAllowed.Contains(tag)) _monitor.Settings.TagAllowed.Add(tag);
+        _monitor.Settings.TagBlocked.Remove(tag);   // allow & block are exclusive
+        _monitor.Settings.Save();
+        _monitor.ApplySettings(syncFirewall: true);
+        Refresh();
+    }
+
+    private void OnUnallowTag(object sender, RoutedEventArgs e)
+    {
+        if (SelectedTag is not { } tag) return;
+        _monitor.Settings.TagAllowed.Remove(tag);
+        _monitor.Settings.Save();
+        _monitor.ApplySettings(syncFirewall: true);
+        Refresh();
+    }
+
+    private void OnRemoveAllowed(object sender, RoutedEventArgs e)
+    {
+        if (AllowedList.SelectedItem is not string exe) return;
+        _monitor.SetAllowed(exe, false);
+        Refresh();
     }
 
     private void OnToggleEnabled(object sender, RoutedEventArgs e)
