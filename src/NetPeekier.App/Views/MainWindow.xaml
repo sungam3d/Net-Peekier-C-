@@ -268,25 +268,26 @@
             <DockPanel>
                 <Border DockPanel.Dock="Top" Background="#c8d0da"
                         BorderBrush="#a9b4c0" BorderThickness="0,0,0,1">
-                    <!-- Header strip. Columns use SharedSizeGroup so the rows
-                         below line up automatically. GridSplitters sit on the
-                         right edge of each header cell to resize; header text
-                         is a button that toggles sort. -->
-                    <Grid x:Name="HeaderGrid" Margin="24,0,18,0" Grid.IsSharedSizeScope="False">
+                    <!-- Header strip. Column widths come from the VM, so each
+                         row template below binds to the SAME values and they
+                         line up exactly. The 18px left pad matches the
+                         TreeView item indent (root level has no expander
+                         arrow but still inherits a small chrome offset). -->
+                    <Grid x:Name="HeaderGrid" Margin="22,0,0,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition SharedSizeGroup="C0" Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition SharedSizeGroup="C1" Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition SharedSizeGroup="C2" Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition SharedSizeGroup="C3" Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition SharedSizeGroup="C4" Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition SharedSizeGroup="C5" Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition SharedSizeGroup="C6" Width="*" />
+                            <ColumnDefinition Width="{Binding Col0Width, Mode=TwoWay}" />
+                            <ColumnDefinition Width="5" />
+                            <ColumnDefinition Width="{Binding Col1Width, Mode=TwoWay}" />
+                            <ColumnDefinition Width="5" />
+                            <ColumnDefinition Width="{Binding Col2Width, Mode=TwoWay}" />
+                            <ColumnDefinition Width="5" />
+                            <ColumnDefinition Width="{Binding Col3Width, Mode=TwoWay}" />
+                            <ColumnDefinition Width="5" />
+                            <ColumnDefinition Width="{Binding Col4Width, Mode=TwoWay}" />
+                            <ColumnDefinition Width="5" />
+                            <ColumnDefinition Width="{Binding Col5Width, Mode=TwoWay}" />
+                            <ColumnDefinition Width="5" />
+                            <ColumnDefinition Width="{Binding Col6Width, Mode=TwoWay}" />
                         </Grid.ColumnDefinitions>
 
                         <Button Grid.Column="0"  Tag="Display"   Click="OnSortColumn" Content="{Binding SortHeaderProgram}"   Style="{StaticResource HeaderButton}" HorizontalContentAlignment="Center" />
@@ -311,7 +312,6 @@
                           MouseDoubleClick="OnRowDoubleClick"
                           BorderThickness="1" BorderBrush="#a9b4c0"
                           FontFamily="Segoe UI" FontSize="12"
-                          Grid.IsSharedSizeScope="True"
                           VirtualizingStackPanel.IsVirtualizing="True"
                           VirtualizingStackPanel.VirtualizationMode="Recycling">
 
@@ -334,31 +334,33 @@
                     </TreeView.ContextMenu>
 
                     <TreeView.Resources>
-                        <!-- Shared column definitions reused by both templates
-                             so leaf and group rows align with the header. -->
                         <Style x:Key="CellC" TargetType="TextBlock">
                             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
                             <Setter Property="VerticalAlignment" Value="Center" />
                             <Setter Property="HorizontalAlignment" Value="Center" />
                         </Style>
 
-                        <!-- Leaf (PID) template -->
+                        <!-- Leaf (PID) template. Column widths bind to the
+                             SAME VM properties as the header grid above, so
+                             cells line up under their headers exactly. The
+                             template's data context is the row (ProcessRow);
+                             we use ItemsControl.DataContext to reach the VM. -->
                         <DataTemplate x:Key="LeafTemplate">
-                            <Grid>
+                            <Grid DataContext="{Binding}">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition SharedSizeGroup="C0" />
+                                    <ColumnDefinition Width="{Binding DataContext.Col0Width, RelativeSource={RelativeSource AncestorType=TreeView}}" />
                                     <ColumnDefinition Width="5" />
-                                    <ColumnDefinition SharedSizeGroup="C1" />
+                                    <ColumnDefinition Width="{Binding DataContext.Col1Width, RelativeSource={RelativeSource AncestorType=TreeView}}" />
                                     <ColumnDefinition Width="5" />
-                                    <ColumnDefinition SharedSizeGroup="C2" />
+                                    <ColumnDefinition Width="{Binding DataContext.Col2Width, RelativeSource={RelativeSource AncestorType=TreeView}}" />
                                     <ColumnDefinition Width="5" />
-                                    <ColumnDefinition SharedSizeGroup="C3" />
+                                    <ColumnDefinition Width="{Binding DataContext.Col3Width, RelativeSource={RelativeSource AncestorType=TreeView}}" />
                                     <ColumnDefinition Width="5" />
-                                    <ColumnDefinition SharedSizeGroup="C4" />
+                                    <ColumnDefinition Width="{Binding DataContext.Col4Width, RelativeSource={RelativeSource AncestorType=TreeView}}" />
                                     <ColumnDefinition Width="5" />
-                                    <ColumnDefinition SharedSizeGroup="C5" />
+                                    <ColumnDefinition Width="{Binding DataContext.Col5Width, RelativeSource={RelativeSource AncestorType=TreeView}}" />
                                     <ColumnDefinition Width="5" />
-                                    <ColumnDefinition SharedSizeGroup="C6" />
+                                    <ColumnDefinition Width="{Binding DataContext.Col6Width, RelativeSource={RelativeSource AncestorType=TreeView}}" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0"  Text="{Binding Display}"   Style="{StaticResource CellC}" HorizontalAlignment="Left" Foreground="#555" />
                                 <TextBlock Grid.Column="2"  Text="{Binding Up}"        Style="{StaticResource CellC}" FontFamily="Consolas" />
@@ -376,19 +378,19 @@
                                                   ItemTemplate="{StaticResource LeafTemplate}">
                             <Grid>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition SharedSizeGroup="C0" />
+                                    <ColumnDefinition Width="{Binding DataContext.Col0Width, RelativeSource={RelativeSource AncestorType=TreeView}}" />
                                     <ColumnDefinition Width="5" />
-                                    <ColumnDefinition SharedSizeGroup="C1" />
+                                    <ColumnDefinition Width="{Binding DataContext.Col1Width, RelativeSource={RelativeSource AncestorType=TreeView}}" />
                                     <ColumnDefinition Width="5" />
-                                    <ColumnDefinition SharedSizeGroup="C2" />
+                                    <ColumnDefinition Width="{Binding DataContext.Col2Width, RelativeSource={RelativeSource AncestorType=TreeView}}" />
                                     <ColumnDefinition Width="5" />
-                                    <ColumnDefinition SharedSizeGroup="C3" />
+                                    <ColumnDefinition Width="{Binding DataContext.Col3Width, RelativeSource={RelativeSource AncestorType=TreeView}}" />
                                     <ColumnDefinition Width="5" />
-                                    <ColumnDefinition SharedSizeGroup="C4" />
+                                    <ColumnDefinition Width="{Binding DataContext.Col4Width, RelativeSource={RelativeSource AncestorType=TreeView}}" />
                                     <ColumnDefinition Width="5" />
-                                    <ColumnDefinition SharedSizeGroup="C5" />
+                                    <ColumnDefinition Width="{Binding DataContext.Col5Width, RelativeSource={RelativeSource AncestorType=TreeView}}" />
                                     <ColumnDefinition Width="5" />
-                                    <ColumnDefinition SharedSizeGroup="C6" />
+                                    <ColumnDefinition Width="{Binding DataContext.Col6Width, RelativeSource={RelativeSource AncestorType=TreeView}}" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0"  Text="{Binding Display}" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Left" TextTrimming="CharacterEllipsis" Foreground="{Binding RowColor}" />
                                 <TextBlock Grid.Column="2"  Text="{Binding Up}"        FontFamily="Consolas" FontWeight="SemiBold" VerticalAlignment="Center" HorizontalAlignment="Center" />

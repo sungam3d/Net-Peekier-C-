@@ -98,6 +98,57 @@ public sealed class MainViewModel : ObservableObject
     private string _status = "starting up…";
     public string Status { get => _status; private set => SetField(ref _status, value); }
 
+    // ---- column widths --------------------------------------------------
+    // Owned here so the header strip and every row template can bind to the
+    // same values. Stored as GridLength so they can be slotted straight into
+    // ColumnDefinition.Width. The last (Listening) column is "star" so it
+    // takes the remaining space; the others are pixel widths that persist.
+    // Defaults match the Python build's column proportions.
+    private GridLength _col0Width = new(185);   // Program
+    private GridLength _col1Width = new(78);    // Up
+    private GridLength _col2Width = new(78);    // Down
+    private GridLength _col3Width = new(85);    // TotalUp
+    private GridLength _col4Width = new(85);    // TotalDown
+    private GridLength _col5Width = new(80);    // Tag
+    private GridLength _col6Width = new(1, GridUnitType.Star);   // Active Ports (filler)
+
+    public GridLength Col0Width { get => _col0Width; set => SetField(ref _col0Width, value); }
+    public GridLength Col1Width { get => _col1Width; set => SetField(ref _col1Width, value); }
+    public GridLength Col2Width { get => _col2Width; set => SetField(ref _col2Width, value); }
+    public GridLength Col3Width { get => _col3Width; set => SetField(ref _col3Width, value); }
+    public GridLength Col4Width { get => _col4Width; set => SetField(ref _col4Width, value); }
+    public GridLength Col5Width { get => _col5Width; set => SetField(ref _col5Width, value); }
+    public GridLength Col6Width { get => _col6Width; set => SetField(ref _col6Width, value); }
+
+    /// <summary>Load saved widths from settings on startup.</summary>
+    public void LoadColumnWidths()
+    {
+        if (!_monitor.Settings.ColumnWidths.TryGetValue("main", out var map)) return;
+        if (map.TryGetValue("C0", out var w0) && w0 > 20) Col0Width = new GridLength(w0);
+        if (map.TryGetValue("C1", out var w1) && w1 > 20) Col1Width = new GridLength(w1);
+        if (map.TryGetValue("C2", out var w2) && w2 > 20) Col2Width = new GridLength(w2);
+        if (map.TryGetValue("C3", out var w3) && w3 > 20) Col3Width = new GridLength(w3);
+        if (map.TryGetValue("C4", out var w4) && w4 > 20) Col4Width = new GridLength(w4);
+        if (map.TryGetValue("C5", out var w5) && w5 > 20) Col5Width = new GridLength(w5);
+        // Col6 is star, not persisted.
+    }
+
+    /// <summary>Save the six fixed-width columns to settings.</summary>
+    public void SaveColumnWidths()
+    {
+        var map = new Dictionary<string, int>
+        {
+            ["C0"] = (int)Col0Width.Value,
+            ["C1"] = (int)Col1Width.Value,
+            ["C2"] = (int)Col2Width.Value,
+            ["C3"] = (int)Col3Width.Value,
+            ["C4"] = (int)Col4Width.Value,
+            ["C5"] = (int)Col5Width.Value,
+        };
+        _monitor.Settings.ColumnWidths["main"] = map;
+        _monitor.Settings.Save();
+    }
+
     // ---- column sorting -------------------------------------------------
     private string _sortKey = "Down";   // default: downloads, descending
     private SortDir _sortDir = SortDir.Desc;
